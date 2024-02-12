@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="gris_standard">#565656</color>
+    <color name="black75">#BF000000</color>
+    <color name="red_lan">#D3593F</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00FFFFFF</color>
+    <color name="red_border">#A70000</color>
+    <color name="standard">#FFC840</color>
+</resources>
