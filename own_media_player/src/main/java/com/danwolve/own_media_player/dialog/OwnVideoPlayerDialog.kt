@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.FragmentManager
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
 import com.danwolve.own_media_player.extensions.animate
 import com.danwolve.own_media_player.extensions.notNull
@@ -63,7 +64,7 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         binding = DiaVideoBinding.inflate(LayoutInflater.from(context),null,false)
         return binding.root
     }
@@ -87,6 +88,18 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
 
     override fun dismiss() {
         super.dismiss()
+    }
+
+    /**
+     * Ejecuta esta función para que el dialog con el video se gire automaticamente conforme giras la pantalla
+     */
+    fun setAutoPan(){
+        binding.ownMediaPlayer.setAutoPan()
+    }
+
+    override fun show(manager: FragmentManager, tag: String?) {
+        if (manager.fragments.any { it is OwnVideoPlayerDialog }) return
+        super.show(manager, tag)
     }
 
 

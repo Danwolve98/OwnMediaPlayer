@@ -30,12 +30,15 @@ import com.danwolve.own_media_player.extensions.visible
 /**
  * Clase creada para la reproducción de videos, es automático, lo único obligatorio a implementar es:
  * 1. Asignar la vista en el xml donde quieras ver el video
- * 2. En códogo acceder a esta vista y llamar a [setVideoUrl] o [setVideoPath]
+ * 2. En código acceder a esta vista y llamar a [setVideoUrl] o [setVideoPath]
  *
  * NOTA: Para dejar a [OwnMediaPlayer] tener el control a la hora de girar la pantalla importante especificar en la Actividad en el "AndroidManifest"
  * android:configChanges="orientation|screenSize"
  */
-class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
+class OwnMediaPlayer @JvmOverloads constructor (
+    contexto: Context,
+    atributeSet : AttributeSet? = null,
+    orientation : Int? = null)
     : ConstraintLayout(contexto,atributeSet) {
     companion object{
         private const val TAG = "OwnMediaPlayer"
@@ -49,6 +52,9 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
 
         const val PAUSED = -1
         const val PLAYING = 0
+    }
+    init {
+        orientation
     }
 
     //  BASICS
@@ -92,7 +98,6 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
         if(startOrientation == null)
             startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR
         createView()
-        setUpCleanUp()
         countDownTimer.start()
     }
 
@@ -100,33 +105,8 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
      * Infla la vista
      */
     private fun createView(){
-        binding = CustomMediaPlayerBinding.inflate(LayoutInflater.from(context),this,true)
+        binding = CustomMediaPlayerBinding.inflate(LayoutInflater.from(context),this)
         hideOwnMediaPlayer(0f)
-    }
-
-    /**
-     * Se encarga de limpiar los [Runnable] asociados al handler
-     */
-    private fun setUpCleanUp() {
-        addOnAttachStateChangeListener(object : OnAttachStateChangeListener{
-            override fun onViewAttachedToWindow(v: View) {}
-            override fun onViewDetachedFromWindow(v: View) {
-                startOrientation.notNull { activity?.requestedOrientation = it }
-                cleanProgressRunnable()
-            }
-        })
-    }
-
-    override fun onConfigurationChanged(newConfig: Configuration?) {
-        when(newConfig?.orientation){
-            Configuration.ORIENTATION_PORTRAIT-> orientation = PORTRAIT
-            Configuration.ORIENTATION_LANDSCAPE-> orientation = FULLSCREEN
-        }
-
-        cleanProgressRunnable()
-        removeAllViews()
-        init()
-        prepareVideo()
     }
 
     /**
@@ -233,7 +213,6 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
                 assingOwnMediaController(it)
                 if (autoPlay) it.start()
             }
-            //TODO SIN IMPLEMENTAR
             ownTextureView.setOnErrorListener {
 
             }
@@ -259,15 +238,11 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
             //  FULL SCREEN
             activity.notNull {activity->
                 btFullScreenVideo.setOnClickListener {
-                    if(btFullScreenVideo.isChecked){
-                        orientation = FULLSCREEN
-                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                    }
-                    else{
-                        orientation = SENSOR
-                        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-                    }
-                    binding.root.requestLayout()
+                    orientation = if(btFullScreenVideo.isChecked)
+                        FULLSCREEN
+                    else
+                        PORTRAIT
+                    activity.requestedOrientation = orientation
                 }
             }
 
@@ -385,6 +360,10 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
         activity?.requestedOrientation = orientation
     }
 
+    fun setAutoPan(){
+
+    }
+
     /**
      * Desabilita los giros de la pantalla en general, incluido el del botón
      */
@@ -491,7 +470,6 @@ class OwnMediaPlayer constructor (contexto: Context, atributeSet : AttributeSet)
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
-        startOrientation.notNull { activity?.requestedOrientation = it }
         cleanProgressRunnable()
     }
 

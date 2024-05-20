@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.ActionMode
 import android.view.LayoutInflater
 import android.view.View
+import com.danwolve.own_media_player.dialog.OwnVideoPlayerDialog
 import com.danwolve.own_media_player.views.OwnMediaPlayer
 import com.example.ownmediaplayer.databinding.ActivityMainBinding
 import java.io.File
@@ -20,6 +21,9 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.ownMediaPlayer.setVideoUrl("yourURL")
+        OwnVideoPlayerDialog().apply {
+            setUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")
+        }.show(supportFragmentManager,"TAG")
+/*        binding.ownMediaPlayer.setVideoUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")*/
     }
 }

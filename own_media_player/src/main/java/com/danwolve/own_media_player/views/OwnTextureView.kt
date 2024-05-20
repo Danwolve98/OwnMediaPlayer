@@ -29,7 +29,6 @@ internal class OwnTextureView : TextureView,
 
     private var currentOrientation : Int = OwnMediaPlayer.PORTRAIT
 
-
     private var onPreparedListener: ((MediaPlayer) -> Unit)? = null
     private var onCompletitionListener: ((MediaPlayer) -> Unit)? = null
     private var onErrorListener: ((MediaPlayer) -> Unit)? = null
@@ -83,19 +82,16 @@ internal class OwnTextureView : TextureView,
     private fun initializeMediaPlayer() {
         mediaPlayer = MediaPlayer().apply {
             setSurface(surface)
-            this@OwnTextureView.audioSeassisonId = audioManager.generateAudioSessionId()
-            this.audioSessionId = this@OwnTextureView.audioSeassisonId
             setAudioAttributes(audioAttributes)
             setDataSource(videoUrl)
             setOnPreparedListener {
                 it.setVolume(1f,1f)
                 onPreparedListener?.invoke(it)
                 updateTextureViewSize()
-                mediaPlayer.start()
             }
-            setOnErrorListener { mp, _, _ ->
+            setOnErrorListener { mp, what, extras ->
                 onErrorListener?.invoke(mp)
-                Toast.makeText(context, "ERROR DE ALGO", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "WHAT: $what, EXTRAS: $extras", Toast.LENGTH_SHORT).show()
                 false
             }
             setOnSeekCompleteListener { onSeekCompleteListener?.invoke(it) }
@@ -110,18 +106,15 @@ internal class OwnTextureView : TextureView,
     }
 
     private fun updateTextureViewSize() {
-        val videoWidth = mediaPlayer.videoWidth.toFloat()
-        val videoHeight = mediaPlayer.videoHeight.toFloat()
-        val viewWidth = width.toFloat()
+        if(currentOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT){
+            val videoWidth = mediaPlayer.videoWidth.toFloat()
+            val videoHeight = mediaPlayer.videoHeight.toFloat()
+            val viewWidth = width.toFloat()
 
-        val newHeightVideo =
-            if(currentOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)
-            viewWidth * videoHeight / videoWidth
-        else
-            height.toFloat()
-
-        layoutParams.height = newHeightVideo.toInt()
-        requestLayout()
+            val newHeightVideo = viewWidth * videoHeight / videoWidth
+            layoutParams.height = newHeightVideo.toInt()
+            requestLayout()
+        }
     }
 
     override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
@@ -136,7 +129,8 @@ internal class OwnTextureView : TextureView,
     }
 
     override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-        mediaPlayer.release()
+        if(::mediaPlayer.isInitialized)
+            mediaPlayer.release()
         return true
     }
 
