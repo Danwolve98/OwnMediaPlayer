@@ -18,7 +18,9 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.widget.SeekBar
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet.Motion
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.CustomMediaPlayerBinding
 import com.danwolve.own_media_player.extensions.animate
@@ -121,6 +123,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Oculta la interfaz del video con una animación
      */
     private fun hideOwnMediaPlayer(duration : Float = 1f){
+        isHidden = true
         with(binding){
             seekBar.animate(duracion = 0.4f*duration, alpha = 0f, y = -100f){ it.invisible() }
             btPlusTenSeconds.animate(duracion = 0.25f*duration, alpha = 0f,x=-50f){it.invisible()}
@@ -137,6 +140,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Muestra la interfaz del video con una animación
      */
     private fun showOwnMediaPlayer(duration : Float = 1f){
+        isHidden = false
         with(binding){
             seekBar.animate(duracion = 0.3f*duration, alpha = 1f,y = 0f, initVisible = true)
             btPlusTenSeconds.animate(duracion = 0.15f*duration, alpha = 1f,x=0f, initVisible = true)
@@ -181,21 +185,36 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     /**
+     * Función para que funcione con ajustes de configuración en Manifest
+     */
+    override fun onConfigurationChanged(newConfig: Configuration?) {
+        when(newConfig?.orientation){
+            Configuration.ORIENTATION_PORTRAIT-> orientation = PORTRAIT
+            Configuration.ORIENTATION_LANDSCAPE-> orientation = FULLSCREEN
+        }
+
+        cleanProgressRunnable()
+        removeAllViews()
+        init()
+        prepareVideo()
+    }
+
+    /**
      * Prepara el video para ser ejecutado
      */
     private fun prepareVideo(autoPlay : Boolean = true){
         with(binding){
-
-            root.setOnTouchListener { _, event ->
+            seekBar.setOnTouchListener { v, event ->
                 when(event.action){
                     MotionEvent.ACTION_DOWN->{
                         countDownTimer.cancel()
+                        false
+                    }
+                    MotionEvent.ACTION_UP->{
                         countDownTimer.start()
                         false
                     }
-                    else->{
-                        false
-                    }
+                    else->false
                 }
             }
 
@@ -205,6 +224,17 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
            videoUrl.notNull { ownTextureView.setVideo(it) }
            videoPath.notNull { ownTextureView.setVideo(it) }
+
+            ownTextureView.setOnInfoListener { mp, what, extra ->
+                when(what){
+                    MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START->{
+                        loading.invisible()
+                    }
+                    MediaPlayer.MEDIA_INFO_BUFFERING_START->{
+                        loading.visible()
+                    }
+                }
+            }
 
             ownTextureView.setOnPreparedListener {
                 loading.invisible()
@@ -282,13 +312,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
             }
 
             //HIDE-SHOW
-            binding.root.setOnClickListener {
+            binding.ownTextureView.setOnClickListener {
                 if(isHidden){
                     showOwnMediaPlayer()
                 }
                 else
                     hideOwnMediaPlayer()
-                isHidden = !isHidden
             }
 
             //  PROGRESS

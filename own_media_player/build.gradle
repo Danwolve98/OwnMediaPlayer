@@ -12,8 +12,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 34
 
-        version 1.0
-        versionName "1.0"
+        version 1.1
+        versionName "1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -44,15 +44,24 @@ dependencies {
     implementation 'com.google.android.material:material:1.11.0'
 }
 
-afterEvaluate {
+/*afterEvaluate {
     publishing{
-        publications{
             release(MavenPublication){
                 from components.release
                 groupId = 'com.github.danwolve98'
                 artifactId = 'own_media_player'
-                version = '1.0'
+                version = '1.1'
             }
+        }
+}*/
+
+afterEvaluate {
+    android.libraryVariants.each { variant ->
+        publishing.publications.create(variant.name, MavenPublication) {
+            from components.findByName(variant.name)
+            groupId = 'com.danwolve'
+            artifactId = 'ownmediaplayer'
+            version = '1.1'
         }
     }
 }

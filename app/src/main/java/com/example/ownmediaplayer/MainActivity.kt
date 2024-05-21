@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         OwnVideoPlayerDialog().apply {
-            setUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")
+            setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
         }.show(supportFragmentManager,"TAG")
 /*        binding.ownMediaPlayer.setVideoUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")*/
     }

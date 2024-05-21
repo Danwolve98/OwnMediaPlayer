@@ -11,7 +11,6 @@ import android.util.AttributeSet
 import android.view.Surface
 import android.view.TextureView
 import android.widget.Toast
-import java.io.File
 
 internal class OwnTextureView : TextureView,
     TextureView.SurfaceTextureListener{
