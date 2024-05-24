@@ -20,4 +20,15 @@
         <item name="android:progressBackgroundTint">@color/red_lan</item>
         <item name="android:thumbTint">@color/red_border</item>
     </style>
+
+    <style name="DialogAnimation">
+        <item name="android:windowEnterAnimation">@anim/fade_in_fast</item>
+        <item name="android:windowExitAnimation">@anim/fade_out_fast</item>
+    </style>
+
+    <style name="GalleryDialogTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
 </resources>

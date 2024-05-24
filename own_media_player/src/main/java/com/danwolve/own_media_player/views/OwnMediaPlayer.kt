@@ -17,10 +17,20 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet.Motion
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.marginEnd
+import androidx.core.view.marginLeft
+import androidx.core.view.updateLayoutParams
+import androidx.core.view.updateMargins
+import androidx.core.view.updatePadding
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.CustomMediaPlayerBinding
 import com.danwolve.own_media_player.extensions.animate
@@ -55,9 +65,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
         const val PAUSED = -1
         const val PLAYING = 0
     }
-    init {
-        orientation
-    }
 
     //  BASICS
     private var activity: Activity? = null
@@ -65,7 +72,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private lateinit var mediaPlayer : MediaPlayer
     private lateinit var progressRunnable: Runnable
 
+    private lateinit var fullScreenCallBack : () -> Unit
+
+    private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
+
     private val handlerProgress by lazy { Handler(Looper.getMainLooper()) }
+
     private val countDownTimer by lazy { object : CountDownTimer(4000,1000){
         override fun onTick(millisUntilFinished: Long) {}
         override fun onFinish() {
@@ -79,7 +91,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private var videoUrl : String? = null
     private var videoPath : String? = null
     private var orientation : Int = SENSOR
-    private var startOrientation : Int? = null
     private var isMuted = UNMUTE
     private var isPlaying = PLAYING
 
@@ -97,8 +108,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private fun init(){
         activity = getActivity()
-        if(startOrientation == null)
-            startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR
         createView()
         countDownTimer.start()
     }
@@ -109,7 +118,25 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private fun createView(){
         binding = CustomMediaPlayerBinding.inflate(LayoutInflater.from(context),this)
         hideOwnMediaPlayer(0f)
+
+        if(orientation == FULLSCREEN)
+            ViewCompat.setOnApplyWindowInsetsListener(binding.ownTextureView) { v, windowInsets ->
+                v.updateLayoutParams<MarginLayoutParams> {
+                    updateMargins(getMargin(windowInsets.displayCutout?.safeInsetLeft),
+                        0,
+                        getMargin(windowInsets.displayCutout?.safeInsetLeft),
+                        0)
+                }
+                WindowInsetsCompat.CONSUMED
+            }
     }
+
+    private fun getMargin(margin : Int?) =
+        if(margin == null || margin == 0)
+            resources.getDimension(R.dimen.min_margin).toInt()
+        else
+            margin
+
 
     /**
      * Cleans the [progressRunnable] if is is initialized
@@ -151,6 +178,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             tvCurrentVideo.animate(duracion = 0.15f*duration, alpha = 1f, initVisible = true)
             btPlayPause.animate(duracion = 0.15f*duration,alpha=1f, y = 0f, initVisible = true)
         }
+        countDownTimer.start()
     }
 
     /**
@@ -268,6 +296,9 @@ class OwnMediaPlayer @JvmOverloads constructor (
             //  FULL SCREEN
             activity.notNull {activity->
                 btFullScreenVideo.setOnClickListener {
+                    if(::fullScreenCallBack.isInitialized)
+                        fullScreenCallBack()
+
                     orientation = if(btFullScreenVideo.isChecked)
                         FULLSCREEN
                     else
@@ -426,6 +457,9 @@ class OwnMediaPlayer @JvmOverloads constructor (
         else
             mediaPlayer.isPlaying
 
+    internal fun setFullScreenCallBack(callBack : ()->Unit) {
+        fullScreenCallBack = callBack
+    }
 
     override fun onSaveInstanceState(): Parcelable? {
         val superState = super.onSaveInstanceState()
@@ -436,7 +470,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
         orientation.notNull { savedState.orientation = it }
         isMuted.notNull { savedState.isMuted = it }
         isPlaying.notNull { savedState.isPlaying = it }
-        startOrientation.notNull { savedState.startOrientation = it }
         return savedState
     }
 
@@ -449,7 +482,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
             state.orientation.notNull { orientation = it }
             state.isMuted.notNull { isMuted = it }
             state.isPlaying.notNull { isPlaying = it }
-            state.startOrientation.notNull { startOrientation = it }
         } else {
             super.onRestoreInstanceState(state)
         }
@@ -510,6 +542,10 @@ class OwnMediaPlayer @JvmOverloads constructor (
             this.seekTo(progress, MediaPlayer.SEEK_CLOSEST)
         else
             this.seekTo(progress.toInt())
+    }
+
+    internal fun setWindowInsetsController(windowInsetsControllerCompat: WindowInsetsControllerCompat){
+        this.windowInsetsControllerCompat = windowInsetsControllerCompat
     }
 }
 

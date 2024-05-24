@@ -77,7 +77,6 @@ internal class OwnTextureView : TextureView,
         }
     }
 
-
     private fun initializeMediaPlayer() {
         mediaPlayer = MediaPlayer().apply {
             setSurface(surface)
