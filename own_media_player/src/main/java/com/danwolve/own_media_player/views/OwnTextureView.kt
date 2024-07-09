@@ -12,6 +12,7 @@ import android.view.Surface
 import android.view.TextureView
 import android.widget.Toast
 
+@Deprecated("")
 internal class OwnTextureView : TextureView,
     TextureView.SurfaceTextureListener{
 

@@ -2,6 +2,7 @@ package com.example.ownmediaplayer
 
 import android.content.Context
 import android.net.Uri
+import android.nfc.Tag
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.AttributeSet
@@ -16,14 +17,21 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
+    companion object{
+        private const val TAG = "MainActivity"
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        OwnVideoPlayerDialog().apply {
+        OwnVideoPlayerDialog.Builder
+            .setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
+            .activeNotification()
+            .build()
+            .show(supportFragmentManager, TAG)
+        /*OwnVideoPlayerDialog.setUrl("").activeNotification().apply {
             setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
-        }.show(supportFragmentManager,"TAG")
+        }.show(supportFragmentManager,"TAG")*/
 /*        binding.ownMediaPlayer.setVideoUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")*/
     }
 }

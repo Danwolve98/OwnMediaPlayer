@@ -13,16 +13,16 @@
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:elevation="10dp"
-            android:indeterminateTint="@color/red_lan"
+            android:indeterminateTint="@color/red_buffer"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
-        <com.danwolve.own_media_player.views.OwnTextureView
-            android:id="@+id/own_texture_view"
+        <com.danwolve.own_media_player.views.OwnSurfaceView
+            android:id="@+id/own_surface_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:clickable="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent"
@@ -35,10 +35,10 @@
             app:icon="@drawable/play_pause_selector"
             app:iconSize="80dp"
             style="@style/OwnMediaPlayerButton"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
-            app:layout_constraintStart_toStartOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
+            app:layout_constraintStart_toStartOf="@id/own_surface_view"
             android:layout_margin="10dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -48,8 +48,8 @@
             app:icon="@drawable/fullscreen_selector"
             app:iconSize="30dp"
             style="@style/OwnMediaPlayerButton"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
             android:layout_margin="10dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -73,8 +73,8 @@
             style="@style/OwnMediaPlayerButton"
             android:layout_marginEnd="35dp"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
             />
 
         <com.google.android.material.button.MaterialButton
@@ -87,8 +87,8 @@
             style="@style/OwnMediaPlayerButton"
             android:layout_marginStart="35dp"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
             />
 
         <androidx.appcompat.widget.AppCompatSeekBar
@@ -98,9 +98,9 @@
             android:progress="0"
             android:indeterminate="false"
             style="@style/SeekBarStyle"
-            app:layout_constraintStart_toStartOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"/>
+            app:layout_constraintStart_toStartOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_current_video"

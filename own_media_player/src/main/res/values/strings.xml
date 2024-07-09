@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="presiona_para_salir">Presiona para salir</string>
+    <string name="servicio_para_mostrar_audio_saliente_museos">Servicio para mostrar audio saliente</string>
 </resources>
