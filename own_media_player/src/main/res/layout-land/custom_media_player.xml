@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge>
     <androidx.constraintlayout.widget.ConstraintLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         xmlns:app="http://schemas.android.com/apk/res-auto"
-        android:background="@color/black75">
+        android:background="@color/black75"
+        xmlns:tools="http://schemas.android.com/tools">
 
         <ProgressBar
             android:id="@+id/loading"
             android:layout_width="170dp"
             android:layout_height="170dp"
             android:elevation="10dp"
-            android:indeterminateTint="@color/red_lan"
+            android:indeterminateTint="@color/red_buffer"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
-        <com.danwolve.own_media_player.views.OwnTextureView
-            android:id="@+id/own_texture_view"
+        <com.danwolve.own_media_player.views.OwnSurfaceView
+            android:id="@+id/own_surface_view"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:backgroundTint="@color/black75"
+            android:layout_height="match_parent"
+            android:clickable="true"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            tools:layout_editor_absoluteX="0dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bt_play_pause"
@@ -33,10 +34,10 @@
             app:icon="@drawable/play_pause_selector"
             app:iconSize="120dp"
             style="@style/OwnMediaPlayerButton"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
-            app:layout_constraintStart_toStartOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
+            app:layout_constraintStart_toStartOf="@id/own_surface_view"
             android:layout_margin="10dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -46,8 +47,8 @@
             app:icon="@drawable/fullscreen_selector"
             app:iconSize="40dp"
             style="@style/OwnMediaPlayerButton"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
             android:layout_margin="10dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -70,8 +71,8 @@
             style="@style/OwnMediaPlayerButton"
             app:layout_constraintStart_toEndOf="@id/bt_play_pause"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
             />
 
         <com.google.android.material.button.MaterialButton
@@ -83,8 +84,8 @@
             style="@style/OwnMediaPlayerButton"
             app:layout_constraintEnd_toStartOf="@id/bt_play_pause"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"
+            app:layout_constraintTop_toTopOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"
             />
 
         <androidx.appcompat.widget.AppCompatSeekBar
@@ -93,9 +94,9 @@
             android:layout_height="30dp"
             android:progress="0"
             style="@style/SeekBarStyle"
-            app:layout_constraintStart_toStartOf="@id/own_texture_view"
-            app:layout_constraintEnd_toEndOf="@id/own_texture_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_texture_view"/>
+            app:layout_constraintStart_toStartOf="@id/own_surface_view"
+            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
+            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_current_video"
@@ -120,4 +121,3 @@
             android:textColor="@color/white"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-</merge>

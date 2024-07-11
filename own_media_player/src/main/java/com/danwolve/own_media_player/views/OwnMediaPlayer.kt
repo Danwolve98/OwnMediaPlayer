@@ -1,11 +1,13 @@
 package com.danwolve.own_media_player.views
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ComponentName
+import android.content.ContentResolver
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.media.MediaPlayer
 import android.net.Uri
 import android.os.CountDownTimer
@@ -14,20 +16,24 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
+import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.Toast
-import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updateMargins
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.danwolve.own_media_player.R
@@ -51,35 +57,37 @@ import com.google.common.util.concurrent.MoreExecutors
  */
 class OwnMediaPlayer @JvmOverloads constructor (
     contexto: Context,
-    atributeSet : AttributeSet? = null,
-    orientation : Int? = null)
-    : ConstraintLayout(contexto,atributeSet) {
+    private val atributeSet : AttributeSet? = null)
+    : FrameLayout(contexto,atributeSet), DefaultLifecycleObserver {
 
     companion object{
         private const val TAG = "OwnMediaPlayer"
         private const val MEDIA_SESSION_ID = "MEDIA_SESSION"
-
-        const val PORTRAIT = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        const val SENSOR = ActivityInfo.SCREEN_ORIENTATION_SENSOR
-        const val FULLSCREEN = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 
         const val MUTE = -1
         const val UNMUTE = 0
 
         const val PAUSED = -1
         const val PLAYING = 0
+        const val FINISHED = 1
     }
 
     //PRO
     private var controllerFuture : ListenableFuture<MediaController>?  = null
     private var mediaController : MediaController? = null
     private var useLegacy = false
-
+    private lateinit var mediaSessionServiceIntent : Intent
     //  BASICS
     private var activity: Activity? = null
     private lateinit var binding : CustomMediaPlayerBinding
     private lateinit var player : Player
     private lateinit var progressRunnable: Runnable
+
+    //NOTIFICACIONES
+    private var hasNoti = false
+    private var titleNoti : String? = null
+    private var authorNoti : String? = null
+    private var photoNoti : Any? = null
 
     private lateinit var fullScreenCallBack : () -> Unit
 
@@ -95,11 +103,19 @@ class OwnMediaPlayer @JvmOverloads constructor (
         }
     }}
 
+    private val videoClickListener = OnClickListener {
+        if(isHidden){
+            showOwnMediaPlayer()
+        }
+        else
+            hideOwnMediaPlayer()
+    }
+
     //  PARCELABLES
     private var videoProgress : Long? = null
     private var videoUrl : String? = null
     private var videoPath : String? = null
-    private var orientation : Int = SENSOR
+    private val orientation by lazy { activity?.requestedOrientation }
     private var isMuted = UNMUTE
     private var isPlaying = PLAYING
 
@@ -116,28 +132,50 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     private fun init(){
+        getAtributes()
+        mediaSessionServiceIntent = Intent(context,MediaService::class.java)
         activity = getActivity()
         createView()
-        countDownTimer.start()
+    }
+
+    private fun getAtributes(){
+        context.theme.obtainStyledAttributes(atributeSet,R.styleable.OwnMediaPlayer,0,0).run {
+            try {
+                hasNoti = getBoolean(R.styleable.OwnMediaPlayer_hasNotification,false)
+                if(hasNoti){
+                    titleNoti = getString(R.styleable.OwnMediaPlayer_titleNotification)
+                    authorNoti = getString(R.styleable.OwnMediaPlayer_authorNotification)
+                    photoNoti = getResourceId(R.styleable.OwnMediaPlayer_photoNotification,R.drawable.own_media_player)
+                }
+            }finally {
+                recycle()
+            }
+        }
     }
 
     /**
      * Infla la vista
      */
     private fun createView(){
-        binding = CustomMediaPlayerBinding.inflate(LayoutInflater.from(context),this)
+        binding = CustomMediaPlayerBinding.inflate(LayoutInflater.from(context),this,true)
+        countDownTimer.start()
         hideOwnMediaPlayer(0f)
+        if(orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+            applyMargins()
+    }
 
-        if(orientation == FULLSCREEN)
-            ViewCompat.setOnApplyWindowInsetsListener(binding.ownSurfaceView!!) { v, windowInsets ->
-                v.updateLayoutParams<MarginLayoutParams> {
-                    updateMargins(getMargin(windowInsets.displayCutout?.safeInsetLeft),
-                        0,
-                        getMargin(windowInsets.displayCutout?.safeInsetLeft),
-                        0)
-                }
-                WindowInsetsCompat.CONSUMED
+    private fun applyMargins(){
+        ViewCompat.setOnApplyWindowInsetsListener(binding.ownSurfaceView) { v, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val insetApply = if(insets.left > insets.right) insets.left else insets.right
+            v.updateLayoutParams<MarginLayoutParams> {
+                updateMargins(getMargin(windowInsets.displayCutout?.safeInsetLeft?.plus(insetApply)),
+                    0,
+                    getMargin(windowInsets.displayCutout?.safeInsetLeft?.plus(insetApply)),
+                    0)
             }
+            WindowInsetsCompat.CONSUMED
+        }
     }
 
     private fun getMargin(margin : Int?) =
@@ -201,19 +239,36 @@ class OwnMediaPlayer @JvmOverloads constructor (
         return String.format("%02d:%02d", minutes,seconds)
     }
 
+    fun setNotification(title : String?, author : String?, photo : String?){
+        hasNoti = true
+        this.titleNoti = title
+        this.authorNoti = author
+        this.photoNoti = photo ?: R.drawable.own_media_player
+    }
+
     /**
-     * OGLIGATORIO
      * Asigna la url del video a mostrar
      */
     fun setVideoUrl(urlVideo : String,autoPlay : Boolean = true){
         videoPath = null
         videoUrl = urlVideo
-        prepareNotificationMedia()
-        //configUI(autoPlay)
+        if(hasNoti)
+            prepareNotificationMedia()
+        else
+            prepareExoPlayer(autoPlay)
+    }
+
+    private fun prepareExoPlayer(autoPlay: Boolean){
+        val exoPlayer = ExoPlayer.Builder(context).build()
+        exoPlayer.playWhenReady = autoPlay
+        assignPlayer(exoPlayer)
+        val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
+        exoPlayer.setMediaItem(mediaItem)
+        exoPlayer.prepare()
+        exoPlayer.play()
     }
 
     /**
-     * OGLIGATORIO
      * Asigna la dirección del video a mostrar
      */
     fun setVideoPath(path : String,autoPlay : Boolean = true) {
@@ -229,7 +284,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     /**
      * Función para que funcione con ajustes de configuración en Manifest
      */
-   /* override fun onConfigurationChanged(newConfig: Configuration?) {
+    /*override fun onConfigurationChanged(newConfig: Configuration?) {
         when(newConfig?.orientation){
             Configuration.ORIENTATION_PORTRAIT-> orientation = PORTRAIT
             Configuration.ORIENTATION_LANDSCAPE-> orientation = FULLSCREEN
@@ -244,7 +299,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     /**
      * Prepara el video para ser ejecutado
      */
-    private fun assignListeners(player: Player, autoPlay : Boolean = true){
+    private fun assignListeners(){
         with(binding){
             seekBar.setOnTouchListener { v, event ->
                 when(event.action){
@@ -261,35 +316,65 @@ class OwnMediaPlayer @JvmOverloads constructor (
             }
 
             btMute.isChecked = isMuted == MUTE
-            btFullScreenVideo.isChecked = orientation == FULLSCREEN
+            btFullScreenVideo.isChecked = orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             btPlayPause.isChecked = isPlaying == PAUSED
 
-            ownSurfaceView?.setOnBufferingUpdateListener{player: Player, l: Long ->
-                loading.visible()
-                binding.seekBar.secondaryProgress = l.toInt()
+            ownSurfaceView.run {
+                //PREPARED
+                setOnPreparedListener {
+                    createProgressRunnable()
+                    showOwnMediaPlayer()
+                    assignOwnMediaController(it)
+                    binding.btPlayPause.icon = AppCompatResources.getDrawable(context,R.drawable.play_pause_selector)
+                }
+                //BUFFER
+                setOnBufferingUpdateListener{player: Player, l: Long ->
+                    loading.visible()
+                    binding.seekBar.secondaryProgress = l.toInt()
+                }
+
+                //READY
+                setOnReadyListener {
+                    loading.invisible()
+                }
+
+                setOnErrorListener {player,playbackException->
+                    Toast.makeText(context, playbackException.message, Toast.LENGTH_SHORT).show()
+                }
+
+                setOnCompletitionListener {
+                    finish()
+                    binding.btPlayPause.icon = AppCompatResources.getDrawable(context,R.drawable.ic_refresh)
+                    binding.btPlayPause.setOnClickListener {
+                        playPauseClick(true)
+                    }
+                }
             }
 
-            ownSurfaceView?.setOnReadyListener {
-                it.play()
-                loading.invisible()
-                createProgressRunnable()
-                showOwnMediaPlayer()
-                assingOwnMediaController(it)
-            }
-            ownSurfaceView?.setOnErrorListener {player,playbackException->
-                Toast.makeText(context, playbackException.message, Toast.LENGTH_SHORT).show()
-                //PLAYBACKEXCEPTION
-            }
-            ownSurfaceView?.setOnCompletitionListener {
-                //PONER RELOAD ICON Y MANDAR AL 0
-            }
+        }
+    }
+
+    private fun finish(){
+        isPlaying = FINISHED
+        countDownTimer.cancel()
+        binding.run {
+            btPlayPause.visible()
+            loading.invisible()
+            btMute.invisible()
+            btLessTenSeconds.invisible()
+            btPlusTenSeconds.invisible()
+            btFullScreenVideo.invisible()
+            seekBar.invisible()
+            tvCurrentVideo.invisible()
+            tvTotalVideo.invisible()
+            ownSurfaceView.setOnClickListener {}
         }
     }
 
     /**
-     * Asigna todas las funcionalidades del [MediaPlayer] a las vistas
+     * Asigna todas las funcionalidades del [Player] a las vistas
      */
-    private fun assingOwnMediaController(player: Player){
+    private fun assignOwnMediaController(player: Player){
         with(binding){
             //  MUTE
             if(isMuted == MUTE) player.volume = 1f
@@ -299,16 +384,16 @@ class OwnMediaPlayer @JvmOverloads constructor (
                     if(::fullScreenCallBack.isInitialized)
                         fullScreenCallBack()
 
-                    orientation = if(btFullScreenVideo.isChecked)
-                        FULLSCREEN
+                    activity.requestedOrientation = if(orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
+                        ActivityInfo.SCREEN_ORIENTATION_SENSOR
                     else
-                        PORTRAIT
-                    activity.requestedOrientation = orientation
+                        ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 }
             }
 
             //  MUTE
             btMute.setOnClickListener {
+                countDownTimer.start()
                 isMuted = if(btMute.isChecked){
                     player.volume = 0f
                     MUTE
@@ -320,36 +405,23 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
             // PLAY-PAUSE
             if(isPlaying == PAUSED) player.pause()
-
-            btPlayPause.setOnClickListener {
-                isPlaying = if(btPlayPause.isChecked){
-                    player.pause()
-                    PAUSED
-                }else{
-                    player.play()
-                    PLAYING
-                }
-            }
+            btPlayPause.setOnClickListener{ playPauseClick() }
 
             //  PLUS-LESS
             btPlusTenSeconds.setOnClickListener {
+                countDownTimer.start()
                 it.playAnimation(R.anim.click_animation)
                 player.seekTo(player.currentPosition+10000L)
             }
 
             btLessTenSeconds.setOnClickListener {
+                countDownTimer.start()
                 it.playAnimation(R.anim.click_animation)
                 player.seekTo(player.currentPosition-10000L)
             }
 
             //HIDE-SHOW
-            binding.ownSurfaceView?.setOnClickListener {
-                if(isHidden){
-                    showOwnMediaPlayer()
-                }
-                else
-                    hideOwnMediaPlayer()
-            }
+            binding.ownSurfaceView.setOnClickListener(videoClickListener)
 
             //  PROGRESS
             tvTotalVideo.text = formatDuration(player.duration)
@@ -363,7 +435,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
                     progress: Int,
                     fromUser: Boolean
                 ) {
-                    if(!fromUser)
+                    if(!fromUser || isPlaying == FINISHED)
                         return
                     player.seekTo(progress.toLong())
                 }
@@ -375,6 +447,28 @@ class OwnMediaPlayer @JvmOverloads constructor (
                 player.seekTo(it)
             }
         }
+    }
+
+    private fun playPauseClick(reset : Boolean = false){
+        if(reset)
+            reset()
+        isPlaying = if(binding.btPlayPause.isChecked){
+            player.pause()
+            PAUSED
+        }else{
+            player.play()
+            PLAYING
+        }
+    }
+
+    private fun reset(){
+        binding.btPlayPause.run {
+            icon = AppCompatResources.getDrawable(context,R.drawable.play_pause_selector)
+            isChecked = false
+            setOnClickListener { playPauseClick() }
+        }
+        binding.ownSurfaceView.setOnClickListener(videoClickListener)
+        showOwnMediaPlayer()
     }
 
     /**
@@ -408,33 +502,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     /**
-     * Configura la rotación especificada
-     * [ActivityInfo]
-     * @param orientation the orientation desired
-     * @throws IllegalArgumentException if the [orientation] is not valid
-     */
-    fun setOrientation(orientation : Int){
-        require(orientation in getScreenConfigs()){
-           "U NEED TO SET A VALID ${ActivityInfo::class.simpleName} screen config"
-        }
-        activity?.requestedOrientation = orientation
-    }
-
-    fun setAutoPan(){
-
-    }
-
-    /**
-     * Desabilita los giros de la pantalla en general, incluido el del botón
-     */
-    @SuppressLint("SourceLockedOrientationActivity")
-    fun disableFullScreen(){
-        orientation = PORTRAIT
-        disableFullScreenButton()
-        activity?.requestedOrientation = PORTRAIT
-    }
-
-    /**
      * Crea un [Runnable] que va a ir actualizando los textos y el [SeekBar] conforme avance el video
      */
     private fun createProgressRunnable(){
@@ -461,13 +528,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
         fullScreenCallBack = callBack
     }
 
-    override fun onSaveInstanceState(): Parcelable? {
+    override fun onSaveInstanceState(): Parcelable {
         val superState = super.onSaveInstanceState()
         val savedState = SavedState(superState)
         videoProgress.notNull { savedState.progressVideo = it }
         videoUrl.notNull { savedState.videoUrl = it }
         videoPath.notNull { savedState.videoPath = it }
-        orientation.notNull { savedState.orientation = it }
         isMuted.notNull { savedState.isMuted = it }
         isPlaying.notNull { savedState.isPlaying = it }
         return savedState
@@ -477,9 +543,8 @@ class OwnMediaPlayer @JvmOverloads constructor (
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
             videoProgress = state.progressVideo
-            state.videoUrl.notNull { setVideoUrl(it) }
+            state.videoUrl.notNull { setVideoUrl(it,true)}
             state.videoPath.notNull { setVideoPath(it) }
-            state.orientation.notNull { orientation = it }
             state.isMuted.notNull { isMuted = it }
             state.isPlaying.notNull { isPlaying = it }
         } else {
@@ -494,7 +559,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
         var videoUrl : String? = null
         var videoPath : String? = null
         var progressVideo : Long = 0L
-        var orientation : Int = SENSOR
         var isMuted : Int = UNMUTE
         var isPlaying : Int = PLAYING
         var startOrientation : Int = ActivityInfo.SCREEN_ORIENTATION_SENSOR
@@ -503,7 +567,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
             progressVideo = parcel.readLong()
             videoUrl = parcel.readString()
             videoPath = parcel.readString()
-            orientation = parcel.readInt()
             isMuted = parcel.readInt()
             isPlaying = parcel.readInt()
             startOrientation = parcel.readInt()
@@ -513,7 +576,6 @@ class OwnMediaPlayer @JvmOverloads constructor (
             out.writeLong(progressVideo)
             out.writeString(videoUrl)
             out.writeString(videoPath)
-            out.writeInt(orientation)
             out.writeInt(isMuted)
             out.writeInt(isPlaying)
             out.writeInt(startOrientation)
@@ -550,25 +612,44 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private fun startMediaController(mediaController: MediaController){
         mediaController.run {
-            player = this
-            assignListeners(this)
-            binding.ownSurfaceView?.setPlayer(player = mediaController)
+            assignPlayer(this)
 
             val mediaItem = MediaItem.Builder()
                 .setMediaId(MEDIA_SESSION_ID)
                 .setUri(videoUrl)
                 .setMediaMetadata(
                     MediaMetadata.Builder()
-                        .setTitle("OwnMediaPlayer")
-                        .setArtworkUri(Uri.parse( "https://encrypted-tbn2.gstatic.com/licensed-image?q=tbn:ANd9GcRvri27lmIFqUw6WxR0_vpLz2QsWOCTyU7erVSbQb2LsTd74CntJNRDfnZtaKG4-rqFOUly7qOpJAdeHjY"))
+                        .setTitle(titleNoti ?: "")
+                        .setArtist(authorNoti ?: "")
+                        .setArtworkUri(getPhotoUri())
                         .build()
-                )
-                .build()
+                ).build()
 
             setMediaItem(mediaItem)
             prepare()
             play()
         }
+    }
+
+    private fun getPhotoUri() : Uri =
+        if(photoNoti is Int)
+            Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).path(Integer.toString(photoNoti as Int)).build()
+        else
+            Uri.parse(photoNoti as String)
+
+    private fun assignPlayer(player: Player){
+        this.player = player
+        assignListeners()
+        binding.ownSurfaceView.setPlayer(player,orientation ?: ActivityInfo.SCREEN_ORIENTATION_SENSOR)
+    }
+
+    override fun onDestroy(owner: LifecycleOwner) {
+        controllerFuture?.let {
+            MediaController.releaseFuture(it)
+            mediaController == null
+        }
+        controllerFuture = null
+        activity?.stopService(mediaSessionServiceIntent)
     }
 }
 

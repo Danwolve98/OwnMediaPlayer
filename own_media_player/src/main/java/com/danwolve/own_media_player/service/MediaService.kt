@@ -1,7 +1,7 @@
 package com.danwolve.own_media_player.service
 
-import android.app.Activity
-import android.app.PendingIntent
+import android.app.ActivityManager
+import android.content.Context
 import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
@@ -18,14 +18,24 @@ class MediaService : MediaSessionService(){
     private var mediaSession : MediaSession? = null
 
     /*private val notificationIntent by lazy {
-        PendingIntent.getActivity(
-            this,
-            0,
-            Intent(this, activity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        if(activity != null)
+            PendingIntent.getActivity(
+                this,
+                0,
+                Intent(this,activity).apply {
+                    flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        else
+            null
     }*/
+
+    private val activity by lazy {
+        val activityManager = this.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        activityManager.appTasks[0].taskInfo.topActivity?.javaClass
+    }
+
+
 
     private val callbackMediaSession by lazy {
         object : MediaSession.Callback{
@@ -65,14 +75,14 @@ class MediaService : MediaSessionService(){
         initializeExoPlayer()
         initializeMediaSession()
     }
+
     private fun initializeExoPlayer(){
         exoPlayer = ExoPlayer.Builder(this@MediaService).build()
     }
     private fun initializeMediaSession(){
-        mediaSession = MediaSession.Builder(this@MediaService,exoPlayer)
-            //.setSessionActivity(notificationIntent)
-            .setCallback(callbackMediaSession)
-            .build()
+        val mediaSessionBuilder = MediaSession.Builder(this@MediaService,exoPlayer).setCallback(callbackMediaSession)
+        //notificationIntent?.let { mediaSessionBuilder.setSessionActivity(it) }
+        mediaSession = mediaSessionBuilder.build()
     }
 
     //TASK REMOVED
@@ -83,7 +93,6 @@ class MediaService : MediaSessionService(){
         stopSelf()
     }
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
-
 
     //ONDESTROY
     override fun onDestroy() {

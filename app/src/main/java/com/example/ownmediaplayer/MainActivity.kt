@@ -24,14 +24,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        OwnVideoPlayerDialog.Builder
+        val dialog = OwnVideoPlayerDialog.Builder
             .setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
-            .activeNotification()
+            .activeNotification(
+                "OwnMediaPlayer",
+                "CR7",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdhHe79aHGHO5SfYZ01rniGOn7--_yPBXC4HIlynkunrmLLU3rli-La4uyaHQq76-ywBUL6RDQ_qzZ4FxW39LM4ERCN9balNn4FJwRUQ")
             .build()
-            .show(supportFragmentManager, TAG)
-        /*OwnVideoPlayerDialog.setUrl("").activeNotification().apply {
-            setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
-        }.show(supportFragmentManager,"TAG")*/
-/*        binding.ownMediaPlayer.setVideoUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")*/
+
+        dialog.show(supportFragmentManager, TAG)
     }
 }
