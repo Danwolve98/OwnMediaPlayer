@@ -60,7 +60,6 @@ internal class OwnSurfaceView : SurfaceView{
     }
 
     fun getAudioSessionId() = audioSeassisonId
-
     fun play() = player.play()
     fun pause() = player.pause()
     fun setOnPreparedListener(listener : (Player) -> Unit){ onPreparedListener = listener }

@@ -122,6 +122,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         isCancelable = true
         if(startOrientation == null){
             startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 

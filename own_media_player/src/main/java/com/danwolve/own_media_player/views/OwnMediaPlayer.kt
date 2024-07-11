@@ -633,7 +633,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private fun getPhotoUri() : Uri =
         if(photoNoti is Int)
-            Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).path(Integer.toString(photoNoti as Int)).build()
+            Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).path((photoNoti as Int).toString()).build()
         else
             Uri.parse(photoNoti as String)
 
