@@ -25,7 +25,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val dialog = OwnVideoPlayerDialog.Builder
-            .setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
+            .setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-04/video_prueba.mp4")
            /* .activeNotification(
                 "OwnMediaPlayer",
                 "CR7",

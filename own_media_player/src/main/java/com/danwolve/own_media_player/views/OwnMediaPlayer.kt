@@ -34,6 +34,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -261,7 +262,9 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     private fun prepareExoPlayer(autoPlay: Boolean){
-        val exoPlayer = ExoPlayer.Builder(context).build()
+        val exoPlayer = ExoPlayer.Builder(context)
+            .setRenderersFactory(DefaultRenderersFactory(context).setEnableDecoderFallback(true))
+            .build()
         assignPlayer(exoPlayer)
         val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
         exoPlayer.setMediaItem(mediaItem)

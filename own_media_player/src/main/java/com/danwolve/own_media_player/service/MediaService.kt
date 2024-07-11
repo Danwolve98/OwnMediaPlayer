@@ -6,6 +6,7 @@ import android.content.Intent
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSession.ConnectionResult
@@ -77,7 +78,9 @@ class MediaService : MediaSessionService(){
     }
 
     private fun initializeExoPlayer(){
-        exoPlayer = ExoPlayer.Builder(this@MediaService).build()
+        exoPlayer = ExoPlayer.Builder(this@MediaService)
+            .setRenderersFactory(DefaultRenderersFactory(this).setEnableDecoderFallback(true))
+            .build()
     }
     private fun initializeMediaSession(){
         val mediaSessionBuilder = MediaSession.Builder(this@MediaService,exoPlayer).setCallback(callbackMediaSession)
