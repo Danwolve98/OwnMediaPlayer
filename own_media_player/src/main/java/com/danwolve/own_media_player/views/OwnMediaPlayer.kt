@@ -16,6 +16,7 @@ import android.os.Looper
 import android.os.Parcel
 import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.widget.FrameLayout
@@ -252,6 +253,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     fun setVideoUrl(urlVideo : String,autoPlay : Boolean = true){
         videoPath = null
         videoUrl = urlVideo
+        Log.e("OwnMediaPlayer","VideoUrl: $videoUrl")
         if(hasNoti)
             prepareNotificationMedia()
         else
@@ -260,12 +262,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private fun prepareExoPlayer(autoPlay: Boolean){
         val exoPlayer = ExoPlayer.Builder(context).build()
-        exoPlayer.playWhenReady = autoPlay
         assignPlayer(exoPlayer)
         val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
-        exoPlayer.play()
+        if(isPlaying == PLAYING)
+            exoPlayer.play()
     }
 
     /**
@@ -385,7 +387,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
                         fullScreenCallBack()
 
                     activity.requestedOrientation = if(orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-                        ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                        ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     else
                         ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                 }
@@ -543,7 +545,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
             videoProgress = state.progressVideo
-            state.videoUrl.notNull { setVideoUrl(it,true)}
+            state.videoUrl.notNull { /*setVideoUrl(it,true)*/ }
             state.videoPath.notNull { setVideoPath(it) }
             state.isMuted.notNull { isMuted = it }
             state.isPlaying.notNull { isPlaying = it }
@@ -627,7 +629,8 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
             setMediaItem(mediaItem)
             prepare()
-            play()
+            if(this@OwnMediaPlayer.isPlaying == PLAYING)
+                play()
         }
     }
 

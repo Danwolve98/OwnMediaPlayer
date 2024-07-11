@@ -26,10 +26,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         val dialog = OwnVideoPlayerDialog.Builder
             .setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
-            .activeNotification(
+           /* .activeNotification(
                 "OwnMediaPlayer",
                 "CR7",
-                /*"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdhHe79aHGHO5SfYZ01rniGOn7--_yPBXC4HIlynkunrmLLU3rli-La4uyaHQq76-ywBUL6RDQ_qzZ4FxW39LM4ERCN9balNn4FJwRUQ"*/)
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdhHe79aHGHO5SfYZ01rniGOn7--_yPBXC4HIlynkunrmLLU3rli-La4uyaHQq76-ywBUL6RDQ_qzZ4FxW39LM4ERCN9balNn4FJwRUQ")*/
             .build()
 
         dialog.show(supportFragmentManager, TAG)

@@ -93,7 +93,6 @@ internal class OwnSurfaceView : SurfaceView{
                             onPreparedListener?.invoke(player)
                             updateTextureViewSize(orientation)
                             playBackPosition?.let { player.seekTo(it) }
-                            player.play()
                         }
                     }
                     Player.STATE_ENDED->{

@@ -118,12 +118,9 @@ class OwnVideoPlayerDialog : DialogFragment() {
         }
     }
 
+
     init {
         isCancelable = true
-        if(startOrientation == null){
-            startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        }
     }
 
     private fun getBundles(){
@@ -142,6 +139,10 @@ class OwnVideoPlayerDialog : DialogFragment() {
         savedInstanceState.notNull {
             it.getString(VIDEO_URL).notNull { urlVideo-> this.urlVideo = urlVideo }
             it.getInt(ORIENTATION).let { startOrientation-> this.startOrientation = startOrientation }
+        }
+        if(startOrientation == null){
+            startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 
