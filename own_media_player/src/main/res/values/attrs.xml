@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="OwnMediaPlayer">
+        <!-- Asigna el color de fondo del botón como se fuera el BackgroundTint de un MaterialButton-->
+        <attr name="hasNotification" format="boolean" />
+        <attr name="titleNotification" format="string" />
+        <attr name="authorNotification" format="string" />
+        <attr name="photoNotification" format="reference" />
+    </declare-styleable>
+</resources>

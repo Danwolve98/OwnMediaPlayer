@@ -2,6 +2,7 @@ package com.danwolve.own_media_player.dialog
 
 import android.annotation.SuppressLint
 import android.app.Dialog
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -12,27 +13,85 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
 import com.danwolve.own_media_player.extensions.animate
 import com.danwolve.own_media_player.extensions.notNull
+import com.danwolve.own_media_player.service.MediaService
 import com.danwolve.own_media_player.views.OwnMediaPlayer
 
-class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : DialogFragment() {
-
+class OwnVideoPlayerDialog : DialogFragment() {
+    private var urlVideo : String? = null
+    private var hasNotification : Boolean = false
+    private var useLegacy : Boolean = false
+    private var titleNoti : String? = null
+    private var authorNoti : String? = null
+    private var photoNoti : String? = null
     companion object{
         private const val TAG = "OwnVideoPlayerDialog"
         private const val VIDEO_URL = "URL"
         private const val ORIENTATION = "ORIENTATION"
+        private const val HAS_NOTIFICATION = "HAS_NOTIFICATION"
+        private const val PHOTO_NOTI = "PHOTO_NOTI"
+        private const val TITLE_NOTI = "TITLE_NOTI"
+        private const val AUTHOR_NOTI = "AUTHOR_NOTI"
+        private const val USE_LEGACY = "USE_LEGACY"
+
+        private fun newInstance(
+            urlVideo : String,
+            hasNotification : Boolean,
+            useLegacy : Boolean,
+            titleNoti : String? = null,
+            authorNoti : String? = null,
+            photoNoti : String? = null
+        ): OwnVideoPlayerDialog{
+            val args = Bundle().apply {
+                putString(VIDEO_URL,urlVideo)
+                putBoolean(HAS_NOTIFICATION,hasNotification)
+                putBoolean(USE_LEGACY,useLegacy)
+                titleNoti?.let { putString(TITLE_NOTI,it) }
+                authorNoti?.let { putString(AUTHOR_NOTI,it) }
+                photoNoti?.let { putString(PHOTO_NOTI,it) }
+            }
+            val fragment = OwnVideoPlayerDialog().apply { arguments = args }
+            return fragment
+        }
     }
 
-    private lateinit var urlVideo : String
+    class Builder private constructor(
+        private val url : String
+    ){
+        private var hasNotification = false
+        private var useLegacy = false
+        private var titleNoti : String? = null
+        private var authorNoti : String? = null
+        private var photoNoti : String? = null
+        companion object{
+            fun setUrl(url: String) : Builder = Builder(url)
+        }
+
+        fun activeNotification(title : String? = null, author : String? = null,photo : String? = null) : Builder{
+            this.hasNotification = true
+            this.titleNoti = title
+            this.authorNoti = author
+            this.photoNoti = photo
+            return this
+        }
+
+        fun useLegacy() : Builder{
+            this.useLegacy = true
+            return this
+        }
+
+        fun build() : OwnVideoPlayerDialog = newInstance(url,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
+    }
+
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
     private lateinit var binding: DiaVideoBinding
 
@@ -59,22 +118,31 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
         }
     }
 
+
     init {
         isCancelable = true
-        if(startOrientation == null)
-            startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 
-    fun setUrl(url : String){
-        urlVideo = url
+    private fun getBundles(){
+        urlVideo = arguments?.getString(VIDEO_URL)
+        hasNotification = arguments?.getBoolean(HAS_NOTIFICATION) ?: false
+        useLegacy = arguments?.getBoolean(USE_LEGACY) ?: false
+        titleNoti = arguments?.getString(TITLE_NOTI)
+        authorNoti = arguments?.getString(AUTHOR_NOTI)
+        photoNoti = arguments?.getString(PHOTO_NOTI)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        getBundles()
         setStyle(STYLE_NORMAL,R.style.GalleryDialogTheme)
         savedInstanceState.notNull {
             it.getString(VIDEO_URL).notNull { urlVideo-> this.urlVideo = urlVideo }
             it.getInt(ORIENTATION).let { startOrientation-> this.startOrientation = startOrientation }
+        }
+        if(startOrientation == null){
+            startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
     }
 
@@ -108,7 +176,7 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
     ): View {
         binding = DiaVideoBinding.inflate(LayoutInflater.from(context),null,false)
 
-        if(activity?.requestedOrientation == OwnMediaPlayer.FULLSCREEN)
+        if(activity?.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
             windowInsetsController?.hide(WindowInsetsCompat.Type.systemBars())
         return binding.root
     }
@@ -137,14 +205,14 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
 
         //OWNMEDIAPLAYER
         binding.ownMediaPlayer.run {
-            if(savedInstanceState?.getString(VIDEO_URL) == null){
-                setVideoUrl(urlVideo)
-            }
+            if(hasNotification)
+                setNotification(titleNoti,authorNoti,photoNoti)
+            setVideoUrl(urlVideo ?: "",true)
             setFullScreenCallBack {
                 hasRotationChange = true
             }
+            lifecycle.addObserver(this)
         }
-
     }
 
     private fun ownDismiss(){
@@ -152,15 +220,8 @@ class OwnVideoPlayerDialog @JvmOverloads constructor(val url : String = "") : Di
         dismiss()
     }
 
-    /**
-     * Ejecuta esta función para que el dialog con el video se gire automaticamente conforme giras la pantalla
-     */
-    fun setAutoPan(){
-        binding.ownMediaPlayer.setAutoPan()
-    }
-
     override fun show(manager: FragmentManager, tag: String?) {
-        if (manager.fragments.any { it is OwnVideoPlayerDialog }) return
+        if (manager.fragments.any { it is OwnVideoPlayerDialog }) return //PARA QUE AL RECREARSE EL FRAGMENT/ACTIVITY NO SE APILEN LOS DIALOGS
         super.show(manager, tag)
     }
 

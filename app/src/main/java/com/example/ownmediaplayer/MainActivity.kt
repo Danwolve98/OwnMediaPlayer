@@ -2,6 +2,7 @@ package com.example.ownmediaplayer
 
 import android.content.Context
 import android.net.Uri
+import android.nfc.Tag
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.AttributeSet
@@ -16,14 +17,21 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
+    companion object{
+        private const val TAG = "MainActivity"
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        OwnVideoPlayerDialog().apply {
-            setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
-        }.show(supportFragmentManager,"TAG")
-/*        binding.ownMediaPlayer.setVideoUrl("https://escolesvalenciades.grupotecopy.es/sites/default/files/videos/2024-02/Big_Buck_Bunny_1080_10.mp4")*/
+        val dialog = OwnVideoPlayerDialog.Builder
+            .setUrl("https://escolesvalenciapre.grupotecopy.es/sites/default/files/videos/2024-02/EIMP%20Corregido%20%282%29_0.mp4")
+           /* .activeNotification(
+                "OwnMediaPlayer",
+                "CR7",
+                "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdhHe79aHGHO5SfYZ01rniGOn7--_yPBXC4HIlynkunrmLLU3rli-La4uyaHQq76-ywBUL6RDQ_qzZ4FxW39LM4ERCN9balNn4FJwRUQ")*/
+            .build()
+
+        dialog.show(supportFragmentManager, TAG)
     }
 }
