@@ -84,6 +84,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private lateinit var binding : CustomMediaPlayerBinding
     private lateinit var player : Player
     private lateinit var progressRunnable: Runnable
+    private lateinit var exoPlayer : ExoPlayer
 
     //NOTIFICACIONES
     private var hasNoti = false
@@ -262,7 +263,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     private fun prepareExoPlayer(autoPlay: Boolean){
-        val exoPlayer = ExoPlayer.Builder(context)
+        exoPlayer = ExoPlayer.Builder(context)
             .setRenderersFactory(DefaultRenderersFactory(context).setEnableDecoderFallback(true))
             .build()
         assignPlayer(exoPlayer)
@@ -650,6 +651,9 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     override fun onDestroy(owner: LifecycleOwner) {
+        if(::exoPlayer.isInitialized){
+            exoPlayer.release()
+        }
         controllerFuture?.let {
             MediaController.releaseFuture(it)
             mediaController == null

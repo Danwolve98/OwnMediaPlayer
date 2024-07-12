@@ -25,8 +25,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         val dialog = OwnVideoPlayerDialog.Builder
-            .setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-04/video_prueba.mp4")
-           /* .activeNotification(
+            .setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-06/Against%20The%20Current%20-%20silent%20stranger%20%28Official%20Music%20Video%29.mp4")
+            /*.activeNotification(
                 "OwnMediaPlayer",
                 "CR7",
                 "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRdhHe79aHGHO5SfYZ01rniGOn7--_yPBXC4HIlynkunrmLLU3rli-La4uyaHQq76-ywBUL6RDQ_qzZ4FxW39LM4ERCN9balNn4FJwRUQ")*/
