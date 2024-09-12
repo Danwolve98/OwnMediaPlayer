@@ -14,7 +14,8 @@ In the current version it supports:
 || OwnMediaPlayer | OwnVideoPlayerDialog |
 |--|--|--|
 | URL | ✅ | ✅ |
-| Resource | ❌ | ❌|
+| URI | ✅ | ✅ |
+| Resource | ❌ | ✅ |
 | Youtube | ❌ | ❌ |
 
 🗈 We are working to make it work in the future with many more formats and forms.
