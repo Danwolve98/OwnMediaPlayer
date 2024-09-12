@@ -120,15 +120,25 @@ internal class OwnSurfaceView : SurfaceView{
     }
 
     private fun updateTextureViewSize(orientation: Int) {
-        if(!isLandscape(orientation)){
-            val videoWidth = player.videoSize.width.toFloat()
-            val videoHeight = player.videoSize.height.toFloat()
-            val viewWidth = width.toFloat()
+        val videoWidth = player.videoSize.width.toFloat()
+        val videoHeight = player.videoSize.height.toFloat()
 
-            val newHeightVideo = viewWidth * videoHeight / videoWidth
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+
+        if(!isLandscape(orientation)){
+            var newHeightVideo = viewWidth * videoHeight / videoWidth
+
+            if(newHeightVideo > viewHeight*0.75f){ //PORCENTAJE MAXIMO DE ALTURA PARA EL VIDEO 75% SOBRE LA ALTURA DEL MÓVIL
+                newHeightVideo = viewHeight * 0.75f
+            }
+
             layoutParams.height = newHeightVideo.toInt()
-            requestLayout()
+        }else if(viewHeight<videoHeight){
+            val newWidthVideo = viewHeight * videoWidth / videoHeight
+            layoutParams.width = newWidthVideo.toInt()
         }
+        requestLayout()
     }
 
     private fun isLandscape(orientation: Int) = orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE

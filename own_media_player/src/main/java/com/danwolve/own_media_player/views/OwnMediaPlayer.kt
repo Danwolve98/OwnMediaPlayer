@@ -7,8 +7,6 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.res.Configuration
-import android.media.MediaPlayer
 import android.net.Uri
 import android.os.CountDownTimer
 import android.os.Handler
@@ -22,6 +20,7 @@ import android.view.MotionEvent
 import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.annotation.OptIn
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -33,7 +32,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
-import androidx.media3.datasource.RawResourceDataSource
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
@@ -52,7 +51,7 @@ import com.google.common.util.concurrent.MoreExecutors
 /**
  * Clase creada para la reproducción de videos, es automático, lo único obligatorio a implementar es:
  * 1. Asignar la vista en el xml donde quieras ver el video
- * 2. En código acceder a esta vista y llamar a [setVideoUrl] o [setVideoPath]
+ * 2. En código acceder a esta vista y llamar a [setVideoUrl] o [setVideoUri]
  *
  * NOTA: Para dejar a [OwnMediaPlayer] tener el control a la hora de girar la pantalla importante especificar en la Actividad en el "AndroidManifest"
  * android:configChanges="orientation|screenSize"
@@ -92,6 +91,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private var authorNoti : String? = null
     private var photoNoti : Any? = null
 
+    private var closeCallBack : (()->Unit)? = null
     private lateinit var fullScreenCallBack : () -> Unit
 
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
@@ -117,7 +117,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     //  PARCELABLES
     private var videoProgress : Long? = null
     private var videoUrl : String? = null
-    private var videoPath : String? = null
+    private var videoUri : Uri? = null
     private val orientation by lazy { activity?.requestedOrientation }
     private var isMuted = UNMUTE
     private var isPlaying = PLAYING
@@ -202,6 +202,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private fun hideOwnMediaPlayer(duration : Float = 1f){
         isHidden = true
         with(binding){
+            btClose.animate(duracion = 0.25f*duration, alpha = 0f){it.invisible()}
             seekBar.animate(duracion = 0.4f*duration, alpha = 0f, y = -100f){ it.invisible() }
             btPlusTenSeconds.animate(duracion = 0.25f*duration, alpha = 0f,x=-50f){it.invisible()}
             btLessTenSeconds.animate(duracion = 0.25f*duration, alpha = 0f,x=50f){it.invisible()}
@@ -219,6 +220,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private fun showOwnMediaPlayer(duration : Float = 1f){
         isHidden = false
         with(binding){
+            btClose.animate(duracion = 0.15f*duration, alpha = 1f, initVisible = true)
             seekBar.animate(duracion = 0.3f*duration, alpha = 1f,y = 0f, initVisible = true)
             btPlusTenSeconds.animate(duracion = 0.15f*duration, alpha = 1f,x=0f, initVisible = true)
             btLessTenSeconds.animate(duracion = 0.15f*duration, alpha = 1f,x=0f, initVisible = true)
@@ -253,7 +255,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Asigna la url del video a mostrar
      */
     fun setVideoUrl(urlVideo : String,autoPlay : Boolean = true){
-        videoPath = null
+        videoUri = null
         videoUrl = urlVideo
         Log.e("OwnMediaPlayer","VideoUrl: $videoUrl")
         if(hasNoti)
@@ -262,25 +264,38 @@ class OwnMediaPlayer @JvmOverloads constructor (
             prepareExoPlayer(autoPlay)
     }
 
+    /**
+     * Asigna la url del video a mostrar
+     */
+    fun setVideoUri(uriVideo : Uri, autoPlay : Boolean = true){
+        videoUri = uriVideo
+        videoUrl = null
+        Log.e("OwnMediaPlayer","VideoUrl: $videoUrl")
+        if(hasNoti)
+            prepareNotificationMedia()
+        else
+            prepareExoPlayer(autoPlay)
+    }
+
+
+    @OptIn(UnstableApi::class)
     private fun prepareExoPlayer(autoPlay: Boolean){
         exoPlayer = ExoPlayer.Builder(context)
             .setRenderersFactory(DefaultRenderersFactory(context).setEnableDecoderFallback(true))
             .build()
         assignPlayer(exoPlayer)
-        val mediaItem = MediaItem.fromUri(Uri.parse(videoUrl))
+
+        val mediaItem = if(videoUrl != null)
+            MediaItem.fromUri(Uri.parse(videoUrl))
+        else if(videoUri != null)
+            MediaItem.fromUri(videoUri!!)
+        else
+            MediaItem.fromUri(Uri.parse(""))
+
         exoPlayer.setMediaItem(mediaItem)
         exoPlayer.prepare()
         if(isPlaying == PLAYING)
             exoPlayer.play()
-    }
-
-    /**
-     * Asigna la dirección del video a mostrar
-     */
-    fun setVideoPath(path : String,autoPlay : Boolean = true) {
-        videoUrl = null
-        videoPath = path
-        //configUI(autoPlay)
     }
 
     fun setLegacy(useLegacy : Boolean){
@@ -377,6 +392,10 @@ class OwnMediaPlayer @JvmOverloads constructor (
         }
     }
 
+    fun setCloseCallBack(callBack: () -> Unit){
+        closeCallBack = callBack
+    }
+
     /**
      * Asigna todas las funcionalidades del [Player] a las vistas
      */
@@ -407,6 +426,11 @@ class OwnMediaPlayer @JvmOverloads constructor (
                     player.volume = 1f
                     UNMUTE
                 }
+            }
+
+            //CLOSE
+            btClose.setOnClickListener {
+                closeCallBack?.invoke()
             }
 
             // PLAY-PAUSE
@@ -539,7 +563,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         val savedState = SavedState(superState)
         videoProgress.notNull { savedState.progressVideo = it }
         videoUrl.notNull { savedState.videoUrl = it }
-        videoPath.notNull { savedState.videoPath = it }
+        videoUri.notNull { savedState.videoUri = it }
         isMuted.notNull { savedState.isMuted = it }
         isPlaying.notNull { savedState.isPlaying = it }
         return savedState
@@ -549,8 +573,8 @@ class OwnMediaPlayer @JvmOverloads constructor (
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
             videoProgress = state.progressVideo
-            state.videoUrl.notNull { /*setVideoUrl(it,true)*/ }
-            state.videoPath.notNull { setVideoPath(it) }
+            state.videoUrl.notNull { videoUrl = it/*setVideoUrl(it,true)*/ }
+            state.videoUri.notNull { videoUri = it/*setVideoUri(it)*/ }
             state.isMuted.notNull { isMuted = it }
             state.isPlaying.notNull { isPlaying = it }
         } else {
@@ -563,7 +587,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      */
     private class SavedState : BaseSavedState {
         var videoUrl : String? = null
-        var videoPath : String? = null
+        var videoUri : Uri? = null
         var progressVideo : Long = 0L
         var isMuted : Int = UNMUTE
         var isPlaying : Int = PLAYING
@@ -572,7 +596,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         constructor(parcel: Parcel) : super(parcel) {
             progressVideo = parcel.readLong()
             videoUrl = parcel.readString()
-            videoPath = parcel.readString()
+            videoUri = Uri.parse(parcel.readString())
             isMuted = parcel.readInt()
             isPlaying = parcel.readInt()
             startOrientation = parcel.readInt()
@@ -581,7 +605,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             super.writeToParcel(out, flags)
             out.writeLong(progressVideo)
             out.writeString(videoUrl)
-            out.writeString(videoPath)
+            out.writeString(videoUri.toString())
             out.writeInt(isMuted)
             out.writeInt(isPlaying)
             out.writeInt(startOrientation)
@@ -620,6 +644,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
         mediaController.run {
             assignPlayer(this)
 
+            mediaController.addListener(object : Player.Listener{
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    binding.btPlayPause.isChecked = !isPlaying
+                }
+            })
+
             val mediaItem = MediaItem.Builder()
                 .setMediaId(MEDIA_SESSION_ID)
                 .setUri(videoUrl)
@@ -629,9 +659,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
                         .setArtist(authorNoti ?: "")
                         .setArtworkUri(getPhotoUri())
                         .build()
-                ).build()
+                )
 
-            setMediaItem(mediaItem)
+            videoUri?.let { mediaItem.setUri(it) }
+            videoUrl?.let { mediaItem.setUri(it) }
+
+            setMediaItem(mediaItem.build())
             prepare()
             if(this@OwnMediaPlayer.isPlaying == PLAYING)
                 play()

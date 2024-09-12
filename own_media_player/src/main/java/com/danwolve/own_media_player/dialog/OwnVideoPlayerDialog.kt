@@ -2,10 +2,11 @@ package com.danwolve.own_media_player.dialog
 
 import android.annotation.SuppressLint
 import android.app.Dialog
-import android.content.Intent
+import android.content.ContentResolver
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.LayoutInflater
@@ -13,29 +14,32 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
+import androidx.annotation.RawRes
+import androidx.core.os.BundleCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
-import androidx.lifecycle.lifecycleScope
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
 import com.danwolve.own_media_player.extensions.animate
 import com.danwolve.own_media_player.extensions.notNull
-import com.danwolve.own_media_player.service.MediaService
 import com.danwolve.own_media_player.views.OwnMediaPlayer
 
 class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
+    private var uriVideo : Uri? = null
     private var hasNotification : Boolean = false
     private var useLegacy : Boolean = false
     private var titleNoti : String? = null
     private var authorNoti : String? = null
     private var photoNoti : String? = null
+
     companion object{
         private const val TAG = "OwnVideoPlayerDialog"
         private const val VIDEO_URL = "URL"
+        private const val VIDEO_URI = "URI"
         private const val ORIENTATION = "ORIENTATION"
         private const val HAS_NOTIFICATION = "HAS_NOTIFICATION"
         private const val PHOTO_NOTI = "PHOTO_NOTI"
@@ -44,7 +48,8 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private const val USE_LEGACY = "USE_LEGACY"
 
         private fun newInstance(
-            urlVideo : String,
+            urlVideo : String? = null,
+            uriVideo : Uri? = null,
             hasNotification : Boolean,
             useLegacy : Boolean,
             titleNoti : String? = null,
@@ -52,7 +57,8 @@ class OwnVideoPlayerDialog : DialogFragment() {
             photoNoti : String? = null
         ): OwnVideoPlayerDialog{
             val args = Bundle().apply {
-                putString(VIDEO_URL,urlVideo)
+                urlVideo?.let { putString(VIDEO_URL,it) }
+                uriVideo?.let { putParcelable(VIDEO_URI,it) }
                 putBoolean(HAS_NOTIFICATION,hasNotification)
                 putBoolean(USE_LEGACY,useLegacy)
                 titleNoti?.let { putString(TITLE_NOTI,it) }
@@ -65,7 +71,8 @@ class OwnVideoPlayerDialog : DialogFragment() {
     }
 
     class Builder private constructor(
-        private val url : String
+        private val url : String? = null,
+        private val uri : Uri? = null
     ){
         private var hasNotification = false
         private var useLegacy = false
@@ -73,7 +80,17 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private var authorNoti : String? = null
         private var photoNoti : String? = null
         companion object{
-            fun setUrl(url: String) : Builder = Builder(url)
+            fun setUrl(url: String) : Builder = Builder(url = url)
+            fun setUri(uri: Uri) : Builder = Builder( uri = uri)
+            fun setRawRes(@RawRes redId: Int,packageName : String) : Builder =
+                Builder(uri =
+                    //Uri.parse("android.resource://${packageName}/$redId")
+                    Uri.Builder()
+                    .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                    .authority(packageName)
+                    .appendPath("$redId")
+                    .build()
+                )
         }
 
         fun activeNotification(title : String? = null, author : String? = null,photo : String? = null) : Builder{
@@ -89,7 +106,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
             return this
         }
 
-        fun build() : OwnVideoPlayerDialog = newInstance(url,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
+        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
     }
 
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
@@ -124,12 +141,15 @@ class OwnVideoPlayerDialog : DialogFragment() {
     }
 
     private fun getBundles(){
-        urlVideo = arguments?.getString(VIDEO_URL)
-        hasNotification = arguments?.getBoolean(HAS_NOTIFICATION) ?: false
-        useLegacy = arguments?.getBoolean(USE_LEGACY) ?: false
-        titleNoti = arguments?.getString(TITLE_NOTI)
-        authorNoti = arguments?.getString(AUTHOR_NOTI)
-        photoNoti = arguments?.getString(PHOTO_NOTI)
+        arguments?.let { bundle->
+            urlVideo = bundle.getString(VIDEO_URL)
+            uriVideo = BundleCompat.getParcelable(bundle,VIDEO_URI,Uri::class.java)
+            hasNotification = bundle.getBoolean(HAS_NOTIFICATION) ?: false
+            useLegacy = bundle.getBoolean(USE_LEGACY) ?: false
+            titleNoti = bundle.getString(TITLE_NOTI)
+            authorNoti = bundle.getString(AUTHOR_NOTI)
+            photoNoti = bundle.getString(PHOTO_NOTI)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,6 +157,9 @@ class OwnVideoPlayerDialog : DialogFragment() {
         getBundles()
         setStyle(STYLE_NORMAL,R.style.GalleryDialogTheme)
         savedInstanceState.notNull {
+            BundleCompat.getParcelable(it,VIDEO_URI,Uri::class.java)?.let { uri->
+                this.uriVideo = uri
+            }
             it.getString(VIDEO_URL).notNull { urlVideo-> this.urlVideo = urlVideo }
             it.getInt(ORIENTATION).let { startOrientation-> this.startOrientation = startOrientation }
         }
@@ -207,9 +230,13 @@ class OwnVideoPlayerDialog : DialogFragment() {
         binding.ownMediaPlayer.run {
             if(hasNotification)
                 setNotification(titleNoti,authorNoti,photoNoti)
-            setVideoUrl(urlVideo ?: "",true)
+            urlVideo?.let { setVideoUrl(it ,true) }
+            uriVideo?.let { setVideoUri(it,true) }
             setFullScreenCallBack {
                 hasRotationChange = true
+            }
+            setCloseCallBack {
+                ownDismiss()
             }
             lifecycle.addObserver(this)
         }

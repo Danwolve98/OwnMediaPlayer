@@ -23,6 +23,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clickable="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:layout_editor_absoluteX="0dp" />
@@ -47,8 +49,8 @@
             app:icon="@drawable/fullscreen_selector"
             app:iconSize="40dp"
             style="@style/OwnMediaPlayerButton"
-            app:layout_constraintTop_toTopOf="@id/own_surface_view"
-            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
             android:layout_margin="10dp"/>
 
         <com.google.android.material.button.MaterialButton
@@ -61,6 +63,19 @@
             app:layout_constraintEnd_toStartOf="@id/bt_full_screen_video"
             app:layout_constraintTop_toTopOf="@id/bt_full_screen_video"
             />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_close"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        app:icon="@drawable/ic_close"
+        app:iconSize="40dp"
+        style="@style/OwnMediaPlayerButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginStart="15dp"
+        android:layout_marginTop="5dp"
+        />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/bt_plus_ten_seconds"
@@ -94,9 +109,9 @@
             android:layout_height="30dp"
             android:progress="0"
             style="@style/SeekBarStyle"
-            app:layout_constraintStart_toStartOf="@id/own_surface_view"
-            app:layout_constraintEnd_toEndOf="@id/own_surface_view"
-            app:layout_constraintBottom_toBottomOf="@id/own_surface_view"/>
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"/>
 
         <androidx.appcompat.widget.AppCompatTextView
             android:id="@+id/tv_current_video"

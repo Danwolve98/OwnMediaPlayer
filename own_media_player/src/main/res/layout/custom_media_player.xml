@@ -62,6 +62,18 @@
         />
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_close"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:icon="@drawable/ic_close"
+        app:iconSize="32dp"
+        style="@style/OwnMediaPlayerButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_margin="5dp"
+        />
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/bt_plus_ten_seconds"
         android:layout_width="48dp"
         android:layout_height="48dp"
