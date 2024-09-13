@@ -3,6 +3,8 @@
 
 [![JitPackVersion](https://jitpack.io/v/Danwolve98/OwnMediaPlayer.svg)](https://jitpack.io/#Danwolve98/OwnMediaPlayer)
 
+![GitHub last commit](https://img.shields.io/github/last-commit/Danwolve98/OwnMediaPlayer?style=for-the-badge&logo=github)
+
 *OwnMediaPlayer* is a library designed to upload videos easily and simply. It is built with [*Media3*](https://developer.android.com/media/implement/playback-app) of Android.
 The notification part has been used following the [*MediaControls*](https://developer.android.com/media/implement/surfaces/mobile) guide.
 
