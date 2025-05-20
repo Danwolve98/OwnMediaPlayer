@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-07-10T09:52:22.475475Z">
+        <DropdownSelection timestamp="2025-05-20T12:17:37.487781Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=6ER9K23515002782" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/Users/danielfrancos/.android/avd/Chiquito_API_34.avd" />
             </handle>
           </Target>
         </DropdownSelection>

@@ -3,55 +3,117 @@ package com.danwolve.own_media_player.extensions
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AnimationUtils
+import android.view.animation.Interpolator
+import androidx.core.view.isVisible
+import androidx.lifecycle.LifecycleCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Función encargada de ejecutar animaciones básicas sobre las vistas.
  * Si no se especifica ningun "init" el valor inicial de ese parámetro será el por defecto de la vista.
  * Ningún parámetro es obligatorio.
  * @param duracion la duración de la animación en segundos
- * @param x desplazamiento horizontal de la vista
- * @param y desplazamiento vertical de la vista
- * @param alpha el alpha de la vista (fade)
- * @param initAlpha el alpha desde el que parte la animación
- * @param initX posicion x desde el que parte la animación
- * @param initY posicion y desde el que parte la animación
- * @param initScale escala inicial desde la que comienza la animación
+ * @param animParams parametros para la animacion en si
+ * @param initVisible si quieres que la vista empiece visible
+ * @param initAnimParams parametros iniciales de animación
+ * @param delayParams para añadirle un delay a la animacion
+ * @param interpolator si quieres cambiar el interpolador por defecto [AccelerateDecelerateInterpolator]
  * @param endAction la acción que quieres que se ejecute al acabar la animación
  */
-internal fun <T : View> T.animate(
-    duracion : Float = 1F,
-    x : Float? = null,
-    y : Float? = null,
-    alpha : Float? = null,
-    scale : Float? = null,
-    initVisible : Boolean? = null,
-    initAlpha : Float?=null,
-    initX : Float?= null,
-    initY : Float?= null,
-    initScale : Float?= null,
-    endAction : ((T) -> Unit)? = null){
+fun <T : View> T.animate(
+    duracion: Float = 1F,
+    animParams: AnimParams? = null,
+    initVisible: Boolean? = null,
+    initAnimParams: AnimParams? = null,
+    delayParams: DelayParams? = null,
+    interpolator: Interpolator = AccelerateDecelerateInterpolator(),
+    endAction: ((T) -> Unit)? = null
+) {
+    if (delayParams != null) {
+        delayParams.lifecycleScope.launch {
+            delay(delayParams.delay)
+            this@animate.animate(
+                duracion,
+                animParams,
+                initVisible,
+                initAnimParams,
+                null,
+                interpolator,
+                endAction
+            )
+        }
+        return
+    }
+
     val animacion = this.animate()
-    initVisible.notNull { this.visible(it) }
-    initAlpha.notNull { this.alpha = it }
-    initX.notNull { this.translationX = it }
-    initY.notNull { this.translationY = it }
-    initScale.notNull {
-        this.scaleX = it
-        this.scaleY = it
+    initAnimParams?.let {
+        it.alpha?.let { alpha -> this.alpha = alpha }
+        it.x?.let { x ->
+            val currentX = this.translationX
+            this.translationX = x
+            animacion.translationX(currentX)
+        }
+        it.y?.let { y ->
+            val currentY = this.translationY
+            this.translationY = y
+            animacion.translationY(currentY)
+        }
+        it.z?.let { z ->
+            val currentZ = this.translationZ
+            this.translationZ = z
+            animacion.translationZ(currentZ)
+        }
+        it.scale?.let { scale ->
+            this.scaleX = scale
+            this.scaleY = scale
+        }
+        it.rotation?.let { this.rotation = it }
+        it.alpha?.let { this.alpha = it }
     }
-    initAlpha.notNull { this.alpha = it }
-    duracion.notNull { animacion.duration = (it * 1000).toLong() }
-    x.notNull { animacion.translationX(it) }
-    y.notNull { animacion.translationY(it) }
-    alpha.notNull { animacion.alpha(it) }
-    endAction.notNull { animacion.withEndAction { it.invoke(this) } }
-    scale.notNull {
-        animacion.scaleX(it)
-        animacion.scaleY(it)
+    initVisible?.let { visible -> this.isVisible = visible }
+    duracion.let { animacion.duration = (it * 1000).toLong() }
+    animParams?.let {
+        it.x?.let { x ->
+            if (initAnimParams?.x == null)
+                animacion.translationX(x)
+        }
+        it.y?.let { y ->
+            if (initAnimParams?.y == null)
+                animacion.translationY(y)
+        }
+        it.z?.let { z ->
+            if (initAnimParams?.z == null)
+                animacion.translationZ(z)
+        }
+        it.alpha?.let { animacion.alpha(it) }
+
+        it.scale?.let { scale ->
+            animacion.scaleX(scale)
+            animacion.scaleY(scale)
+        }
+        it.rotation?.let { rotation ->
+            animacion.rotation(rotation)
+        }
     }
-    animacion.interpolator = AccelerateDecelerateInterpolator()
+    endAction?.let { animacion.withEndAction { it.invoke(this) } }
+    animacion.interpolator = interpolator
     animacion.start()
 }
+
+data class AnimParams(
+    val x: Float? = null,
+    val y: Float? = null,
+    val z: Float? = null,
+    val rotation: Float? = null,
+    val alpha: Float? = null,
+    val scale: Float? = null
+)
+
+data class DelayParams(
+    val delay: Long,
+    val lifecycleScope: LifecycleCoroutineScope
+)
 
 internal fun View.visible() {
     this.visibility = View.VISIBLE
@@ -68,8 +130,4 @@ internal fun View.visible(visible:Boolean?){
         this.visible()
     else
         this.invisible()
-}
-
-internal fun <T : Any> T?.notNull(f: (it: T) -> Unit) {
-    if (this != null) f(this)
 }

@@ -1,18 +1,10 @@
 package com.example.ownmediaplayer
 
-import android.content.Context
-import android.net.Uri
-import android.nfc.Tag
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.AttributeSet
-import android.util.Log
-import android.view.ActionMode
-import android.view.LayoutInflater
-import android.view.View
+import android.os.Environment
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import com.danwolve.own_media_player.dialog.OwnVideoPlayerDialog
-import com.danwolve.own_media_player.views.OwnMediaPlayer
 import com.example.ownmediaplayer.databinding.ActivityMainBinding
 import java.io.File
 
@@ -27,7 +19,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         val dialog = OwnVideoPlayerDialog.Builder
             //.setRawRes(R.raw.video,packageName)
-            .setUri(File(this.filesDir,"video.mp4").toUri())
+            .setUri(File(Environment.getDownloadCacheDirectory(),"video.mp4").toUri())
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-09/HISTORIA_video-1_SUB-VAL.mp4")
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-06/Against%20The%20Current%20-%20silent%20stranger%20%28Official%20Music%20Video%29.mp4")
             .activeNotification(

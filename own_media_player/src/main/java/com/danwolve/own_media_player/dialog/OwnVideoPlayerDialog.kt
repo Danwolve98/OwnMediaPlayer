@@ -23,9 +23,9 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
-import com.danwolve.own_media_player.extensions.animate
-import com.danwolve.own_media_player.extensions.notNull
+import com.danwolve.own_media_player.extensions.AnimParams
 import com.danwolve.own_media_player.views.OwnMediaPlayer
+import com.danwolve.own_media_player.extensions.animate
 
 class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
@@ -70,6 +70,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         }
     }
 
+    //BUILDER
     class Builder private constructor(
         private val url : String? = null,
         private val uri : Uri? = null
@@ -86,10 +87,10 @@ class OwnVideoPlayerDialog : DialogFragment() {
                 Builder(uri =
                     //Uri.parse("android.resource://${packageName}/$redId")
                     Uri.Builder()
-                    .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
-                    .authority(packageName)
-                    .appendPath("$redId")
-                    .build()
+                        .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+                        .authority(packageName)
+                        .appendPath("$redId")
+                        .build()
                 )
         }
 
@@ -110,6 +111,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     }
 
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
+
     private lateinit var binding: DiaVideoBinding
 
     private var startOrientation : Int? = null
@@ -144,8 +146,8 @@ class OwnVideoPlayerDialog : DialogFragment() {
         arguments?.let { bundle->
             urlVideo = bundle.getString(VIDEO_URL)
             uriVideo = BundleCompat.getParcelable(bundle,VIDEO_URI,Uri::class.java)
-            hasNotification = bundle.getBoolean(HAS_NOTIFICATION) ?: false
-            useLegacy = bundle.getBoolean(USE_LEGACY) ?: false
+            hasNotification = bundle.getBoolean(HAS_NOTIFICATION,false)
+            useLegacy = bundle.getBoolean(USE_LEGACY,false)
             titleNoti = bundle.getString(TITLE_NOTI)
             authorNoti = bundle.getString(AUTHOR_NOTI)
             photoNoti = bundle.getString(PHOTO_NOTI)
@@ -156,13 +158,14 @@ class OwnVideoPlayerDialog : DialogFragment() {
         super.onCreate(savedInstanceState)
         getBundles()
         setStyle(STYLE_NORMAL,R.style.GalleryDialogTheme)
-        savedInstanceState.notNull {
+        savedInstanceState?.let {
             BundleCompat.getParcelable(it,VIDEO_URI,Uri::class.java)?.let { uri->
                 this.uriVideo = uri
             }
-            it.getString(VIDEO_URL).notNull { urlVideo-> this.urlVideo = urlVideo }
+            it.getString(VIDEO_URL)?.let { urlVideo-> this.urlVideo = urlVideo }
             it.getInt(ORIENTATION).let { startOrientation-> this.startOrientation = startOrientation }
         }
+
         if(startOrientation == null){
             startOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
@@ -171,7 +174,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return super.onCreateDialog(savedInstanceState).apply {
-            this.window.notNull {wdw->
+            this.window?.let {wdw->
                 wdw.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                 wdw.requestFeature(Window.FEATURE_NO_TITLE)
                 wdw.setLayout(
@@ -180,7 +183,6 @@ class OwnVideoPlayerDialog : DialogFragment() {
                 )
                 wdw.setWindowAnimations(R.style.DialogAnimation)
                 WindowCompat.setDecorFitsSystemWindows(wdw, false)
-
             }
         }
     }
@@ -205,16 +207,11 @@ class OwnVideoPlayerDialog : DialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        dialog?.window.notNull {
-            it.setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
+        dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
         //ROOT
         binding.root.run {
-            animate(duracion = 0.5f, alpha = 1f, initAlpha = 0f)
+            animate(duracion = 0.5f, initAnimParams = AnimParams(alpha = 0f), animParams = AnimParams(alpha = 1f))
             setOnClickListener {
                 if(canClose)
                     ownDismiss()
@@ -230,6 +227,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         binding.ownMediaPlayer.run {
             if(hasNotification)
                 setNotification(titleNoti,authorNoti,photoNoti)
+
             urlVideo?.let { setVideoUrl(it ,true) }
             uriVideo?.let { setVideoUri(it,true) }
             setFullScreenCallBack {
@@ -243,7 +241,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     }
 
     private fun ownDismiss(){
-        startOrientation.notNull { activity?.requestedOrientation = it }
+        startOrientation?.let { activity?.requestedOrientation = it }
         dismiss()
     }
 
