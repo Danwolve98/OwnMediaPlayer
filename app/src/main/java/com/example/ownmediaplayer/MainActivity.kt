@@ -1,12 +1,10 @@
 package com.example.ownmediaplayer
 
 import android.os.Bundle
-import android.os.Environment
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.net.toUri
 import com.danwolve.own_media_player.dialog.OwnVideoPlayerDialog
 import com.example.ownmediaplayer.databinding.ActivityMainBinding
-import java.io.File
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -17,9 +15,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        //OWM_MEDIA_PLAYER
+        showOwnMediaPlayer()
+
+        //OWM_VIDEO_PLAYER_DIALOG
+        //showOwnVideoPlayerDialog()
+    }
+
+    private fun showOwnMediaPlayer() = with(binding.ownMediaPlayer){
+        visibility = View.VISIBLE
+        autoLoop(false)
+        //setRawRes(R.raw.video,packageName)
+    }
+
+    /*private fun showOwnVideoPlayerDialog(){
         val dialog = OwnVideoPlayerDialog.Builder
-            //.setRawRes(R.raw.video,packageName)
-            .setUri(File(Environment.getDownloadCacheDirectory(),"video.mp4").toUri())
+            .setRawRes(R.raw.video,packageName)
+            .applyFullScreen(true)
+            //.setUri(File(Environment.getDownloadCacheDirectory(),"video.mp4").toUri())
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-09/HISTORIA_video-1_SUB-VAL.mp4")
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-06/Against%20The%20Current%20-%20silent%20stranger%20%28Official%20Music%20Video%29.mp4")
             .activeNotification(
@@ -29,5 +43,5 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         dialog.show(supportFragmentManager, TAG)
-    }
+    }*/
 }

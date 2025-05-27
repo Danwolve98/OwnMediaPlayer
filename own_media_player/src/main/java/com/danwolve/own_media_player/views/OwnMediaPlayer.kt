@@ -19,6 +19,7 @@ import android.widget.FrameLayout
 import android.widget.SeekBar
 import android.widget.Toast
 import androidx.annotation.OptIn
+import androidx.annotation.RawRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -97,9 +98,39 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private var photoNoti : Any? = null
 
     private var closeCallBack : (()->Unit)? = null
-    private lateinit var fullScreenCallBack : () -> Unit
+    private var fullScreenCallBack : (() -> Unit)? = null
+    private var onShowCallBack : (() -> Unit)? = null
+    private var onHideCallBack : (() -> Unit)? = null
 
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
+    /**
+     * Habilita o desabilita el uso de controles para el video
+     */
+    private var mediaControlsEnabled = true
+        set(value) {
+            field = value
+            if(::binding.isInitialized.not())
+                return
+            binding.run {
+                btPlayPause.visible(value)
+                btMute.visible(value)
+                btFullScreenVideo.visible(value)
+                btClose.visible(value && closeCallBack != null)
+                seekBar.visible(value)
+                btLessTenSeconds.visible(value)
+                tvCurrentVideo.visible(value)
+                tvTotalVideo.visible(value)
+            }
+            if(value)
+                setSurfaceViewClickListener(videoClickListener)
+            else
+                setSurfaceViewClickListener(null)
+        }
+
+    private fun setSurfaceViewClickListener(clickListener: OnClickListener?){
+        binding.ownSurfaceView.setOnClickListener(clickListener)
+        binding.root.setOnClickListener(clickListener)
+    }
 
     private val countDownTimer by lazy { object : CountDownTimer(4000,1000){
         override fun onTick(millisUntilFinished: Long) {
@@ -138,6 +169,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
         mediaSessionServiceIntent = Intent(context,MediaService::class.java)
         activity = getActivity()
         createView()
+    }
+
+    private var autoLoop = false
+
+    fun autoLoop(autoLoop: Boolean) {
+        this.autoLoop = autoLoop
     }
 
     private fun getAtributes(){
@@ -205,9 +242,13 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Oculta la interfaz del video con una animación
      */
     private fun hideOwnMediaPlayer(duration : Float = 1f){
+        onHideCallBack?.invoke()
         isHidden = true
         with(binding){
-            btClose.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f),){it.invisible()}
+            if(closeCallBack != null)
+                btClose.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f),){it.invisible()}
+
+            vBlack.animate(duracion = 0.4f*duration, animParams = AnimParams(alpha = 0f)){ it.invisible() }
             seekBar.animate(duracion = 0.4f*duration, animParams = AnimParams(alpha = 0f, y = -100f)){ it.invisible() }
             btPlusTenSeconds.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f, x = -50f)){it.invisible()}
             btLessTenSeconds.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f, x = 50f)){it.invisible()}
@@ -223,9 +264,17 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Muestra la interfaz del video con una animación
      */
     private fun showOwnMediaPlayer(duration : Float = 1f){
+        onShowCallBack?.invoke()
+
+        if(!mediaControlsEnabled)
+            return
+
         isHidden = false
         with(binding){
-            btClose.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f), initVisible = true)
+            if(closeCallBack != null)
+                btClose.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f), initVisible = true)
+
+            vBlack.animate(duracion = 0.3f*duration, animParams = AnimParams(alpha = 0.4f,y=0f), initVisible = true)
             seekBar.animate(duracion = 0.3f*duration, animParams = AnimParams(alpha = 1f,y=0f), initVisible = true)
             btPlusTenSeconds.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f, x = 0f), initVisible = true)
             btLessTenSeconds.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f, x = 0f), initVisible = true)
@@ -235,6 +284,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             tvCurrentVideo.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f), initVisible = true)
             btPlayPause.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f, y = 0f), initVisible = true)
         }
+
         countDownTimer.start()
     }
 
@@ -280,6 +330,23 @@ class OwnMediaPlayer @JvmOverloads constructor (
             prepareExoPlayer(autoPlay)
     }
 
+    /**
+     * Asigna el resource RAW del video a mostrar
+     */
+    fun setRawRes(@RawRes redId: Int,packageName : String,autoPlay: Boolean = true){
+        videoUri = Uri.Builder()
+            .scheme(ContentResolver.SCHEME_ANDROID_RESOURCE)
+            .authority(packageName)
+            .appendPath("$redId")
+            .build()
+        videoUrl = null
+
+        if(hasNoti)
+            prepareNotificationMedia()
+        else
+            prepareExoPlayer(autoPlay)
+    }
+
 
     @OptIn(UnstableApi::class)
     private fun prepareExoPlayer(autoPlay: Boolean){
@@ -306,6 +373,10 @@ class OwnMediaPlayer @JvmOverloads constructor (
         this.useLegacy = useLegacy
     }
 
+    fun setMediaControlsVisible(visible: Boolean){
+        mediaControlsEnabled = visible
+    }
+
     /**
      * Función para que funcione con ajustes de configuración en Manifest
      */
@@ -321,6 +392,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         configUI(player)
     }*/
 
+    private var resetAutoLoop = false
     /**
      * Prepara el video para ser ejecutado
      */
@@ -354,9 +426,13 @@ class OwnMediaPlayer @JvmOverloads constructor (
                 }
 
                 //BUFFER
-                setOnBufferingUpdateListener{player: Player, l: Long ->
+                setOnBufferingUpdateListener{_, _ ->
                     startBufferingJob()
-                    loading.visible()
+
+                    if(resetAutoLoop)
+                        resetAutoLoop = false
+                    else
+                        loading.visible()
                 }
 
                 //READY
@@ -369,11 +445,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
                 }
 
                 setOnCompletionListener {
-                    finish()
-                    binding.btPlayPause.icon = AppCompatResources.getDrawable(context,R.drawable.ic_refresh)
-                    binding.btPlayPause.setOnClickListener {
-                        playPauseClick(true)
+                    if(autoLoop){
+                        player.seekTo(0)
+                        resetAutoLoop = true
                     }
+                    else
+                        finish()
                 }
 
                 setOnPlayingListener {
@@ -391,23 +468,29 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private fun finish(){
         isPlaying = FINISHED
+
+        showOwnMediaPlayer()
         countDownTimer.cancel()
+
         binding.run {
-            btPlayPause.visible()
-            loading.invisible()
-            btMute.invisible()
-            btLessTenSeconds.invisible()
-            btPlusTenSeconds.invisible()
-            btFullScreenVideo.invisible()
-            seekBar.invisible()
-            tvCurrentVideo.invisible()
-            tvTotalVideo.invisible()
-            ownSurfaceView.setOnClickListener {}
+            //PLAY PAUSE
+            btPlayPause.icon = AppCompatResources.getDrawable(context,R.drawable.ic_refresh)
+            btPlayPause.setOnClickListener {
+                playPauseClick(true)
+            }
+            btPlayPause.alpha = 1f
+
+            tvCurrentVideo.text = formatDuration(player.duration)
+            seekBar.progress = player.duration.toInt()
         }
     }
 
     fun setCloseCallBack(callBack: () -> Unit){
         closeCallBack = callBack
+    }
+
+    private val dPlayPause by lazy {
+        AppCompatResources.getDrawable(this.context,R.drawable.play_pause_selector)
     }
 
     /**
@@ -420,9 +503,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             //  FULL SCREEN
             activity?.let {activity->
                 btFullScreenVideo.setOnClickListener {
-                    if(::fullScreenCallBack.isInitialized)
-                        fullScreenCallBack()
-
+                    fullScreenCallBack?.invoke()
                     activity.requestedOrientation = if(orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
                         ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                     else
@@ -453,19 +534,34 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
             //  PLUS-LESS
             btPlusTenSeconds.setOnClickListener {
+                val newPos = player.currentPosition.plus(10_000L).coerceAtMost(player.duration)
                 countDownTimer.start()
                 it.playAnimation(R.anim.click_animation)
-                player.seekTo(player.currentPosition+10000L)
+
+                if(binding.seekBar.progress >= newPos)
+                    return@setOnClickListener
+
+                binding.tvCurrentVideo.text = formatDuration(newPos)
+                binding.seekBar.progress = newPos.toInt()
+                player.seekTo(newPos)
             }
 
             btLessTenSeconds.setOnClickListener {
+                val newPos = player.currentPosition.minus(10_000L).coerceAtLeast(0)
                 countDownTimer.start()
                 it.playAnimation(R.anim.click_animation)
-                player.seekTo(player.currentPosition-10000L)
+
+                if(binding.seekBar.progress == 0)
+                    return@setOnClickListener
+
+                binding.tvCurrentVideo.text = formatDuration(newPos)
+                binding.seekBar.progress = newPos.toInt()
+                player.seekTo(newPos)
             }
 
             //HIDE-SHOW
-            binding.ownSurfaceView.setOnClickListener(videoClickListener)
+            if(mediaControlsEnabled)
+                setSurfaceViewClickListener(videoClickListener)
 
             //  PROGRESS
             tvTotalVideo.text = formatDuration(player.duration)
@@ -477,8 +573,10 @@ class OwnMediaPlayer @JvmOverloads constructor (
                     progress: Int,
                     fromUser: Boolean
                 ) {
-                    if(!fromUser || isPlaying == FINISHED)
+                    if(!fromUser)
                         return
+
+                    binding.tvCurrentVideo.text = formatDuration(progress.toLong())
                     player.seekTo(progress.toLong())
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -494,6 +592,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private fun playPauseClick(reset : Boolean = false){
         if(reset)
             reset()
+
         isPlaying = if(binding.btPlayPause.isChecked){
             player.pause()
             PAUSED
@@ -504,12 +603,13 @@ class OwnMediaPlayer @JvmOverloads constructor (
     }
 
     private fun reset(){
+        player.seekTo(0)
         binding.btPlayPause.run {
             icon = AppCompatResources.getDrawable(context,R.drawable.play_pause_selector)
             isChecked = false
             setOnClickListener { playPauseClick() }
         }
-        binding.ownSurfaceView.setOnClickListener(videoClickListener)
+        setSurfaceViewClickListener(videoClickListener)
         showOwnMediaPlayer()
     }
 
@@ -568,6 +668,14 @@ class OwnMediaPlayer @JvmOverloads constructor (
         else
             player.isPlaying
 
+    internal fun setShowCallBack(callBack : ()->Unit) {
+        onShowCallBack = callBack
+    }
+
+    internal fun setHideCallback(callBack : ()->Unit) {
+        onHideCallBack = callBack
+    }
+
     internal fun setFullScreenCallBack(callBack : ()->Unit) {
         fullScreenCallBack = callBack
     }
@@ -575,22 +683,24 @@ class OwnMediaPlayer @JvmOverloads constructor (
     override fun onSaveInstanceState(): Parcelable {
         val superState = super.onSaveInstanceState()
         val savedState = SavedState(superState)
+        savedState.mediaControlsEnabled = if(mediaControlsEnabled) 1 else 0
         videoProgress?.let { savedState.progressVideo = it }
         videoUrl?.let { savedState.videoUrl = it }
         videoUri?.let { savedState.videoUri = it }
-        isMuted?.let { savedState.isMuted = it }
-        isPlaying?.let { savedState.isPlaying = it }
+        isMuted.let { savedState.isMuted = it }
+        isPlaying.let { savedState.isPlaying = it }
         return savedState
     }
 
     override fun onRestoreInstanceState(state: Parcelable?) {
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
+            mediaControlsEnabled = state.mediaControlsEnabled == 1
             videoProgress = state.progressVideo
             state.videoUrl?.let { videoUrl = it/*setVideoUrl(it,true)*/ }
             state.videoUri?.let { videoUri = it/*setVideoUri(it)*/ }
-            state.isMuted?.let { isMuted = it }
-            state.isPlaying?.let { isPlaying = it }
+            isMuted = state.isMuted
+            isPlaying = state.isPlaying
         } else {
             super.onRestoreInstanceState(state)
         }
@@ -600,6 +710,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Clase para guardar los estados del video
      */
     private class SavedState : BaseSavedState {
+        var mediaControlsEnabled = 1
         var videoUrl : String? = null
         var videoUri : Uri? = null
         var progressVideo : Long = 0L
@@ -608,18 +719,20 @@ class OwnMediaPlayer @JvmOverloads constructor (
         var startOrientation : Int = ActivityInfo.SCREEN_ORIENTATION_SENSOR
         constructor(superState: Parcelable?) : super(superState)
         constructor(parcel: Parcel) : super(parcel) {
-            progressVideo = parcel.readLong()
+            mediaControlsEnabled = parcel.readInt()
             videoUrl = parcel.readString()
             videoUri = Uri.parse(parcel.readString())
+            progressVideo = parcel.readLong()
             isMuted = parcel.readInt()
             isPlaying = parcel.readInt()
             startOrientation = parcel.readInt()
         }
         override fun writeToParcel(out: Parcel, flags: Int) {
             super.writeToParcel(out, flags)
-            out.writeLong(progressVideo)
+            out.writeInt(mediaControlsEnabled)
             out.writeString(videoUrl)
             out.writeString(videoUri.toString())
+            out.writeLong(progressVideo)
             out.writeInt(isMuted)
             out.writeInt(isPlaying)
             out.writeInt(startOrientation)
@@ -652,9 +765,13 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private fun startMediaController(mediaController: MediaController){
         mediaController.run {
             assignPlayer(this)
-
             mediaController.addListener(object : Player.Listener{
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if(isPlaying && binding.btPlayPause.icon != dPlayPause){
+                        binding.btPlayPause.icon = dPlayPause
+                        binding.btPlayPause.setOnClickListener { playPauseClick() }
+                    }
+
                     binding.btPlayPause.isChecked = !isPlaying
                 }
             })

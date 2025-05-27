@@ -2,12 +2,13 @@ package com.danwolve.own_media_player.views
 
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.media.AudioManager
 import android.os.Build
 import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceView
+import android.view.ViewGroup
 import androidx.core.view.ViewCompat
+import androidx.core.view.ViewGroupCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -135,32 +136,38 @@ internal class OwnSurfaceView @JvmOverloads constructor(
 
         val videoAspectRatio = videoWidth.toFloat() / videoHeight.toFloat()
 
-        // Obtener dimensiones reales del View
         val viewWidth = width
-        var viewHeight = height
+        val viewHeight = height
 
-        // Restar insets (márgenes seguros)
-        ViewCompat.getRootWindowInsets(this)?.getInsets(WindowInsetsCompat.Type.systemBars())?.let { insets ->
-            viewHeight -= (insets.top + insets.bottom)
-        }
+        val isLandScape = isLandscape(orientation)
+        val isSlim = viewWidth < viewHeight
+        val adjustHorizontal = !isLandScape && !isSlim
 
-        val layoutParams = layoutParams
+        val expectedWidth: Int
+        val expectedHeight: Int
 
-        if (!isLandscape(orientation)) {
-            // Portrait: usar todo el ancho y ajustar altura respetando aspecto y espacio disponible
-            val expectedHeight = (viewWidth / videoAspectRatio).toInt()
-            layoutParams.width = viewWidth
-            layoutParams.height = expectedHeight.coerceAtMost(viewHeight)
+        if (adjustHorizontal) {
+            expectedHeight = (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
+            expectedWidth = viewWidth
         } else {
-            // Landscape: usar todo el alto y ajustar ancho respetando aspecto y ancho disponible
-            val expectedWidth = (viewHeight * videoAspectRatio).toInt()
-            layoutParams.height = viewHeight
-            layoutParams.width = expectedWidth.coerceAtMost(viewWidth)
+            expectedWidth = (viewHeight * videoAspectRatio).toInt().coerceAtMost(viewWidth)
+            expectedHeight = viewHeight
         }
+
+        val layoutParams = layoutParams as ViewGroup.MarginLayoutParams
+        layoutParams.width = expectedWidth
+        layoutParams.height = expectedHeight
+
+        // Centrar el SurfaceView dentro del contenedor
+        val horizontalMargin = (viewWidth - expectedWidth) / 2
+        val verticalMargin = (viewHeight - expectedHeight) / 2
+
+        layoutParams.setMargins(horizontalMargin, verticalMargin, horizontalMargin, verticalMargin)
 
         setLayoutParams(layoutParams)
         requestLayout()
     }
+
 
 
     private fun isLandscape(orientation: Int): Boolean = orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE

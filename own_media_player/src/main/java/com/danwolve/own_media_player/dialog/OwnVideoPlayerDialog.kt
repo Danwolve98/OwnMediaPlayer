@@ -1,35 +1,44 @@
 package com.danwolve.own_media_player.dialog
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Dialog
 import android.content.ContentResolver
 import android.content.pm.ActivityInfo
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
 import androidx.annotation.RawRes
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.BundleCompat
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.marginTop
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
 import com.danwolve.own_media_player.extensions.AnimParams
-import com.danwolve.own_media_player.views.OwnMediaPlayer
 import com.danwolve.own_media_player.extensions.animate
+import com.danwolve.own_media_player.views.OwnMediaPlayer
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.plusAssign
 
 class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
     private var uriVideo : Uri? = null
+    private var fullScreen : Boolean = false
     private var hasNotification : Boolean = false
     private var useLegacy : Boolean = false
     private var titleNoti : String? = null
@@ -40,6 +49,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private const val TAG = "OwnVideoPlayerDialog"
         private const val VIDEO_URL = "URL"
         private const val VIDEO_URI = "URI"
+        private const val FULLSCREEN = "FULLSCREEN"
         private const val ORIENTATION = "ORIENTATION"
         private const val HAS_NOTIFICATION = "HAS_NOTIFICATION"
         private const val PHOTO_NOTI = "PHOTO_NOTI"
@@ -50,6 +60,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private fun newInstance(
             urlVideo : String? = null,
             uriVideo : Uri? = null,
+            fullScreen: Boolean = false,
             hasNotification : Boolean,
             useLegacy : Boolean,
             titleNoti : String? = null,
@@ -59,6 +70,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
             val args = Bundle().apply {
                 urlVideo?.let { putString(VIDEO_URL,it) }
                 uriVideo?.let { putParcelable(VIDEO_URI,it) }
+                putBoolean(FULLSCREEN,fullScreen)
                 putBoolean(HAS_NOTIFICATION,hasNotification)
                 putBoolean(USE_LEGACY,useLegacy)
                 titleNoti?.let { putString(TITLE_NOTI,it) }
@@ -76,6 +88,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private val uri : Uri? = null
     ){
         private var hasNotification = false
+        private var fullScreen : Boolean = false
         private var useLegacy = false
         private var titleNoti : String? = null
         private var authorNoti : String? = null
@@ -107,7 +120,12 @@ class OwnVideoPlayerDialog : DialogFragment() {
             return this
         }
 
-        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
+        fun applyFullScreen(fullScreen: Boolean) : Builder {
+            this.fullScreen = fullScreen
+            return this
+        }
+
+        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,fullScreen,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
     }
 
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
@@ -117,6 +135,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     private var startOrientation : Int? = null
 
     private var hasRotationChange = false
+
     private val windowInsetsController: WindowInsetsControllerCompat?
         get() =
             if (dialog?.window != null)
@@ -146,6 +165,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         arguments?.let { bundle->
             urlVideo = bundle.getString(VIDEO_URL)
             uriVideo = BundleCompat.getParcelable(bundle,VIDEO_URI,Uri::class.java)
+            fullScreen = bundle.getBoolean(FULLSCREEN,false)
             hasNotification = bundle.getBoolean(HAS_NOTIFICATION,false)
             useLegacy = bundle.getBoolean(USE_LEGACY,false)
             titleNoti = bundle.getString(TITLE_NOTI)
@@ -157,7 +177,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         getBundles()
-        setStyle(STYLE_NORMAL,R.style.GalleryDialogTheme)
+        setStyle()
         savedInstanceState?.let {
             BundleCompat.getParcelable(it,VIDEO_URI,Uri::class.java)?.let { uri->
                 this.uriVideo = uri
@@ -172,10 +192,17 @@ class OwnVideoPlayerDialog : DialogFragment() {
         }
     }
 
+    private fun setStyle(){
+        if(fullScreen)
+            setStyle(STYLE_NO_TITLE,R.style.FullScreenDialog)
+        else
+            setStyle(STYLE_NO_TITLE,R.style.GalleryDialogTheme)
+    }
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return super.onCreateDialog(savedInstanceState).apply {
             this.window?.let {wdw->
-                wdw.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                wdw.setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
                 wdw.requestFeature(Window.FEATURE_NO_TITLE)
                 wdw.setLayout(
                     ViewGroup.LayoutParams.MATCH_PARENT,
@@ -236,9 +263,46 @@ class OwnVideoPlayerDialog : DialogFragment() {
             setCloseCallBack {
                 ownDismiss()
             }
+            setShowCallBack {
+                if(fullScreen)
+                    windowInsetsController?.show(WindowInsetsCompat.Type.systemBars())
+            }
+            setHideCallback {
+                if(fullScreen)
+                    windowInsetsController?.hide(WindowInsetsCompat.Type.systemBars())
+            }
             lifecycle.addObserver(this)
+
+            if(fullScreen){
+                ViewCompat.setOnApplyWindowInsetsListener(this) { v,insets->
+                    val insetsBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+                    val start = if(insetsBars.top == 0) binding.ownMediaPlayer.marginTop else 0
+                    val end = if(insetsBars.top == 0) 0 else insetsBars.top
+
+                    currentInsetsAnimator?.cancel()
+                    currentInsetsAnimator = ValueAnimator.ofInt(start,end).apply {
+                        duration = 400
+                        addUpdateListener {
+                            binding.ownMediaPlayer.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                                topMargin = it.animatedValue as Int
+                            }
+                        }
+                        start()
+                    }
+
+                    insets
+                }
+            }
         }
     }
+
+    private var currentInsetsAnimator : ValueAnimator? = null
+
+    @OptIn(ExperimentalAtomicApi::class)
+    private var a = 0
+
+    private val rootWindowInsets by lazy { ViewCompat.getRootWindowInsets(binding.root)?.getInsets(WindowInsetsCompat.Type.systemBars()) }
 
     private fun ownDismiss(){
         startOrientation?.let { activity?.requestedOrientation = it }
