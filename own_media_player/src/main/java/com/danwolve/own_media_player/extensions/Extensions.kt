@@ -1,5 +1,6 @@
 package com.danwolve.own_media_player.extensions
 
+import android.content.res.Resources
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.AnimationUtils
@@ -131,3 +132,5 @@ internal fun View.visible(visible:Boolean?){
     else
         this.invisible()
 }
+
+internal val Int.dp: Int get() = (this * Resources.getSystem().displayMetrics.density + 0.5f).toInt()

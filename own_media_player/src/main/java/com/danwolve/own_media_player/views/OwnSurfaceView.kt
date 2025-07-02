@@ -7,9 +7,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceView
 import android.view.ViewGroup
-import androidx.core.view.ViewCompat
-import androidx.core.view.ViewGroupCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
@@ -139,14 +136,14 @@ internal class OwnSurfaceView @JvmOverloads constructor(
         val viewWidth = width
         val viewHeight = height
 
+        Log.d("VIEWS_HA","VIDEOWIDTH=$videoWidth \n VIDEOHEIGHT=$videoHeight \n VIEWWIDTH = $viewWidth \n VIEWHEIGHT = $viewHeight")
+
         val isLandScape = isLandscape(orientation)
-        val isSlim = viewWidth < viewHeight
-        val adjustHorizontal = !isLandScape && !isSlim
 
         val expectedWidth: Int
         val expectedHeight: Int
 
-        if (adjustHorizontal) {
+        if (!isLandScape) {
             expectedHeight = (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
             expectedWidth = viewWidth
         } else {

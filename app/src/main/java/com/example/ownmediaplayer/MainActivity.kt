@@ -17,21 +17,24 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         //OWM_MEDIA_PLAYER
-        showOwnMediaPlayer()
+//        showOwnMediaPlayer()
 
         //OWM_VIDEO_PLAYER_DIALOG
-        //showOwnVideoPlayerDialog()
+        showOwnVideoPlayerDialog()
     }
 
     private fun showOwnMediaPlayer() = with(binding.ownMediaPlayer){
         visibility = View.VISIBLE
         autoLoop(false)
+        //setVideoUrl("https://connecta.vlci.valencia.es/apps/escoles/sites/default/files/videos/2024-02/GENT%20MENUDA.mp4")
         //setRawRes(R.raw.video,packageName)
     }
 
-    /*private fun showOwnVideoPlayerDialog(){
+    private fun showOwnVideoPlayerDialog(){
         val dialog = OwnVideoPlayerDialog.Builder
-            .setRawRes(R.raw.video,packageName)
+            .setUrl("https://museusvalenciapre.grupotecopy.es/sites/default/files/2024-10/BEACON%2050%20%2B%20%20Audio%20Benlliure%2042%20%2B%20IMG.mp4")
+            //.setUrl("https://connecta.vlci.valencia.es/apps/escoles/sites/default/files/videos/2024-02/GENT%20MENUDA.mp4")
+            //.setRawRes(R.raw.video,packageName)
             .applyFullScreen(true)
             //.setUri(File(Environment.getDownloadCacheDirectory(),"video.mp4").toUri())
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-09/HISTORIA_video-1_SUB-VAL.mp4")
@@ -43,5 +46,5 @@ class MainActivity : AppCompatActivity() {
             .build()
 
         dialog.show(supportFragmentManager, TAG)
-    }*/
+    }
 }

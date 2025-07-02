@@ -14,11 +14,19 @@ android {
     }
 
     defaultConfig {
-        compileSdk = 35
+        compileSdk = 36
         minSdk = 24
-        version = "1.6.1"
+        version = "1.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    testOptions{
+        targetSdk = 36
+    }
+
+    lint {
+        targetSdk = 36
     }
 
     buildTypes {
@@ -29,14 +37,6 @@ android {
                 "proguard-rules.pro"
             )
         }
-    }
-
-    testOptions {
-        targetSdk = 35
-    }
-
-    lint {
-        targetSdk = 35
     }
 
     compileOptions {
@@ -54,7 +54,7 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.16.0")
-    implementation ("androidx.appcompat:appcompat:1.7.0")
+    implementation ("androidx.appcompat:appcompat:1.7.1")
     implementation ("com.google.android.material:material:1.12.0")
     implementation ("androidx.media3:media3-session:1.7.1")
     implementation ("androidx.media3:media3-exoplayer:1.7.1")
@@ -67,7 +67,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.danwolve"
             artifactId = "ownmediaplayer"
-            version = "1.6.1"
+            version = "1.7.0"
 
             // 'from' debe ir fuera del afterEvaluate, pero puede necesitarlo si el componente aún no existe
             afterEvaluate {

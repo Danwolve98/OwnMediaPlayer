@@ -87,7 +87,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     //  BASICS
     private var activity: Activity? = null
-    private lateinit var binding : CustomMediaPlayerBinding
+    internal lateinit var binding : CustomMediaPlayerBinding
     private lateinit var player : Player
     private var exoPlayer : ExoPlayer? = null
 

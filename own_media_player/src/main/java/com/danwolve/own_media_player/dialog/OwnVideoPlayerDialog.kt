@@ -7,21 +7,25 @@ import android.content.ContentResolver
 import android.content.pm.ActivityInfo
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
 import androidx.annotation.RawRes
+import androidx.core.graphics.Insets
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.os.BundleCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.marginBottom
+import androidx.core.view.marginEnd
+import androidx.core.view.marginStart
 import androidx.core.view.marginTop
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.DialogFragment
@@ -30,10 +34,9 @@ import com.danwolve.own_media_player.R
 import com.danwolve.own_media_player.databinding.DiaVideoBinding
 import com.danwolve.own_media_player.extensions.AnimParams
 import com.danwolve.own_media_player.extensions.animate
+import com.danwolve.own_media_player.extensions.dp
 import com.danwolve.own_media_player.views.OwnMediaPlayer
-import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
-import kotlin.concurrent.atomics.plusAssign
 
 class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
@@ -265,39 +268,92 @@ class OwnVideoPlayerDialog : DialogFragment() {
             }
             setShowCallBack {
                 if(fullScreen)
-                    windowInsetsController?.show(WindowInsetsCompat.Type.systemBars())
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                        windowInsetsController?.show(WindowInsetsCompat.Type.systemBars())
+                    else
+                        @Suppress("DEPRECATION")
+                        dialog?.window?.apply {
+                            decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+                            clearFlags(View.SYSTEM_UI_FLAG_FULLSCREEN)
+                        }
             }
             setHideCallback {
                 if(fullScreen)
-                    windowInsetsController?.hide(WindowInsetsCompat.Type.systemBars())
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+                        windowInsetsController?.hide(WindowInsetsCompat.Type.systemBars())
+                    else
+                        @Suppress("DEPRECATION")
+                        dialog?.window?.decorView?.systemUiVisibility = (
+                                        View.SYSTEM_UI_FLAG_FULLSCREEN or
+                                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                )
             }
             lifecycle.addObserver(this)
 
-            if(fullScreen){
-                ViewCompat.setOnApplyWindowInsetsListener(this) { v,insets->
-                    val insetsBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            ViewCompat.setOnApplyWindowInsetsListener(this) { v,insets->
+                val insetsBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 
-                    val start = if(insetsBars.top == 0) binding.ownMediaPlayer.marginTop else 0
-                    val end = if(insetsBars.top == 0) 0 else insetsBars.top
+                if(fullScreen)
+                    animateTopSystemBars(insetsBars)
 
-                    currentInsetsAnimator?.cancel()
-                    currentInsetsAnimator = ValueAnimator.ofInt(start,end).apply {
-                        duration = 400
-                        addUpdateListener {
-                            binding.ownMediaPlayer.updateLayoutParams<ViewGroup.MarginLayoutParams>{
-                                topMargin = it.animatedValue as Int
-                            }
-                        }
-                        start()
-                    }
-
-                    insets
-                }
+                //SECURE AREA
+                animateSeekBarInsets(insetsBars)
+                insets
             }
+
         }
     }
 
-    private var currentInsetsAnimator : ValueAnimator? = null
+    private fun animateTopSystemBars(insetsBars: Insets){
+        val topView = binding.ownMediaPlayer.binding.lyTop
+
+        val start = if(insetsBars.top == 0) topView.marginTop else 0
+        val end = if(insetsBars.top == 0) 0 else insetsBars.top
+
+        currentTopInsetsAnimator?.cancel()
+        currentTopInsetsAnimator = ValueAnimator.ofInt(start,end).apply {
+            duration = 200
+            addUpdateListener {
+                topView.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                    topMargin = it.animatedValue as Int
+                }
+            }
+            start()
+        }
+    }
+
+    private fun animateSeekBarInsets(insetsBars: Insets){
+        val bottomView = binding.ownMediaPlayer.binding.seekBar
+        val marginInsets = maxOf(insetsBars.right,insetsBars.bottom,insetsBars.left)
+
+        val start = if(marginInsets == 0) maxOf(bottomView.marginBottom,bottomView.marginStart,bottomView.marginEnd) else 0.dp
+        val end = if(marginInsets == 0) 0.dp else marginInsets
+
+        currentBottomInsetsAnimator?.cancel()
+        currentBottomInsetsAnimator = ValueAnimator.ofInt(start,end).apply {
+            duration = 200
+            addUpdateListener {
+                if(activity?.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE){
+                    bottomView.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                        marginStart = it.animatedValue as Int
+                        marginEnd = it.animatedValue as Int
+                    }
+                    binding.ownMediaPlayer.binding.lyTop.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                        marginStart = it.animatedValue as Int
+                        marginEnd = it.animatedValue as Int
+                    }
+                }else
+                    bottomView.updateLayoutParams<ViewGroup.MarginLayoutParams>{
+                        bottomMargin = it.animatedValue as Int
+                    }
+            }
+            start()
+        }
+    }
+
+    private var currentTopInsetsAnimator : ValueAnimator? = null
+    private var currentBottomInsetsAnimator : ValueAnimator? = null
 
     @OptIn(ExperimentalAtomicApi::class)
     private var a = 0
