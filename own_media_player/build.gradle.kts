@@ -16,7 +16,7 @@ android {
     defaultConfig {
         compileSdk = 36
         minSdk = 24
-        version = "1.7.0"
+        version = "1.8.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -67,7 +67,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.danwolve"
             artifactId = "ownmediaplayer"
-            version = "1.7.0"
+            version = "1.8.0"
 
             // 'from' debe ir fuera del afterEvaluate, pero puede necesitarlo si el componente aún no existe
             afterEvaluate {

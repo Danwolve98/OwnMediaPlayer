@@ -42,6 +42,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
     private var uriVideo : Uri? = null
     private var fullScreen : Boolean = false
+    private var showFullScreenButton = true
     private var hasNotification : Boolean = false
     private var useLegacy : Boolean = false
     private var titleNoti : String? = null
@@ -64,6 +65,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
             urlVideo : String? = null,
             uriVideo : Uri? = null,
             fullScreen: Boolean = false,
+            showFullScreenButton : Boolean = true,
             hasNotification : Boolean,
             useLegacy : Boolean,
             titleNoti : String? = null,
@@ -91,6 +93,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private val uri : Uri? = null
     ){
         private var hasNotification = false
+        private var showFullScreenButton : Boolean = true
         private var fullScreen : Boolean = false
         private var useLegacy = false
         private var titleNoti : String? = null
@@ -128,7 +131,12 @@ class OwnVideoPlayerDialog : DialogFragment() {
             return this
         }
 
-        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,fullScreen,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
+        fun showFullScreenButton(show: Boolean) : Builder {
+            this.showFullScreenButton = show
+            return this
+        }
+
+        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,fullScreen,showFullScreenButton,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
     }
 
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
@@ -238,7 +246,6 @@ class OwnVideoPlayerDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         dialog?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-
         //ROOT
         binding.root.run {
             animate(duracion = 0.5f, initAnimParams = AnimParams(alpha = 0f), animParams = AnimParams(alpha = 1f))
@@ -255,6 +262,9 @@ class OwnVideoPlayerDialog : DialogFragment() {
 
         //OWNMEDIAPLAYER
         binding.ownMediaPlayer.run {
+            setFullScreen(fullScreen)
+            showFullScreenButton(showFullScreenButton)
+
             if(hasNotification)
                 setNotification(titleNoti,authorNoti,photoNoti)
 

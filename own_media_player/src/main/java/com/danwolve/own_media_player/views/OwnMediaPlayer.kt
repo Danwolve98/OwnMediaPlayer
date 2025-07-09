@@ -97,10 +97,14 @@ class OwnMediaPlayer @JvmOverloads constructor (
     private var authorNoti : String? = null
     private var photoNoti : Any? = null
 
+    private var fullScreen : Boolean = false
+
     private var closeCallBack : (()->Unit)? = null
     private var fullScreenCallBack : (() -> Unit)? = null
     private var onShowCallBack : (() -> Unit)? = null
     private var onHideCallBack : (() -> Unit)? = null
+
+    private var showFullScreenButton = true
 
     private lateinit var windowInsetsControllerCompat: WindowInsetsControllerCompat
     /**
@@ -114,7 +118,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             binding.run {
                 btPlayPause.visible(value)
                 btMute.visible(value)
-                btFullScreenVideo.visible(value)
+                btFullScreenVideo.visible(value && showFullScreenButton)
                 btClose.visible(value && closeCallBack != null)
                 seekBar.visible(value)
                 btLessTenSeconds.visible(value)
@@ -253,7 +257,8 @@ class OwnMediaPlayer @JvmOverloads constructor (
             btPlusTenSeconds.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f, x = -50f)){it.invisible()}
             btLessTenSeconds.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f, x = 50f)){it.invisible()}
             btMute.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f)){it.invisible()}
-            btFullScreenVideo.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f)){it.invisible()}
+            if(showFullScreenButton)
+                btFullScreenVideo.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f)){it.invisible()}
             tvTotalVideo.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f)){it.invisible()}
             tvCurrentVideo.animate(duracion = 0.25f*duration, animParams = AnimParams(alpha = 0f)){it.invisible()}
             btPlayPause.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 0f, y = 100f), initVisible = true){it.invisible()}
@@ -279,13 +284,18 @@ class OwnMediaPlayer @JvmOverloads constructor (
             btPlusTenSeconds.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f, x = 0f), initVisible = true)
             btLessTenSeconds.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f, x = 0f), initVisible = true)
             btMute.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f), initVisible = true)
-            btFullScreenVideo.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f), initVisible = true)
+            if(showFullScreenButton)
+                btFullScreenVideo.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f), initVisible = true)
             tvTotalVideo.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f), initVisible = true)
             tvCurrentVideo.animate(duracion = 0.15f*duration, animParams = AnimParams(alpha = 1f), initVisible = true)
             btPlayPause.animate(duracion = 0.15f*duration,animParams = AnimParams(alpha = 1f, y = 0f), initVisible = true)
         }
 
         countDownTimer.start()
+    }
+
+    fun setFullScreen(fullScreen: Boolean){
+        binding.ownSurfaceView.setFullScreen(fullScreen)
     }
 
     /**
@@ -630,12 +640,10 @@ class OwnMediaPlayer @JvmOverloads constructor (
     /**
      * Desabilita el fullScreen del botón
      */
-    fun disableFullScreenButton(){ binding.btFullScreenVideo.invisible() }
-
-    /**
-     * Habilita el fullScreen del botón
-     */
-    fun ableFullScreenButton(){ binding.btFullScreenVideo.visible() }
+    fun showFullScreenButton(show: Boolean){
+        showFullScreenButton = show
+        binding.btFullScreenVideo.visible(show)
+    }
 
     private fun getScreenConfigs(): List<Int> {
         return ActivityInfo::class.java.declaredFields
@@ -684,6 +692,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         val superState = super.onSaveInstanceState()
         val savedState = SavedState(superState)
         savedState.mediaControlsEnabled = if(mediaControlsEnabled) 1 else 0
+        savedState.fullScreen = if(fullScreen) 1 else 0
         videoProgress?.let { savedState.progressVideo = it }
         videoUrl?.let { savedState.videoUrl = it }
         videoUri?.let { savedState.videoUri = it }
@@ -695,6 +704,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
     override fun onRestoreInstanceState(state: Parcelable?) {
         if (state is SavedState) {
             super.onRestoreInstanceState(state.superState)
+            fullScreen = state.fullScreen == 1
             mediaControlsEnabled = state.mediaControlsEnabled == 1
             videoProgress = state.progressVideo
             state.videoUrl?.let { videoUrl = it/*setVideoUrl(it,true)*/ }
@@ -710,6 +720,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
      * Clase para guardar los estados del video
      */
     private class SavedState : BaseSavedState {
+        var fullScreen : Int = 0
         var mediaControlsEnabled = 1
         var videoUrl : String? = null
         var videoUri : Uri? = null
@@ -719,6 +730,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         var startOrientation : Int = ActivityInfo.SCREEN_ORIENTATION_SENSOR
         constructor(superState: Parcelable?) : super(superState)
         constructor(parcel: Parcel) : super(parcel) {
+            fullScreen = parcel.readInt()
             mediaControlsEnabled = parcel.readInt()
             videoUrl = parcel.readString()
             videoUri = Uri.parse(parcel.readString())
@@ -729,6 +741,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         }
         override fun writeToParcel(out: Parcel, flags: Int) {
             super.writeToParcel(out, flags)
+            out.writeInt(fullScreen)
             out.writeInt(mediaControlsEnabled)
             out.writeString(videoUrl)
             out.writeString(videoUri.toString())

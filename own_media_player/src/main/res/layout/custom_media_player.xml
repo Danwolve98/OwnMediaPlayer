@@ -65,6 +65,7 @@
             android:layout_height="48dp"
             app:icon="@drawable/fullscreen_selector"
             app:iconSize="30dp"
+            android:visibility="gone"
             style="@style/OwnMediaPlayerButton"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>

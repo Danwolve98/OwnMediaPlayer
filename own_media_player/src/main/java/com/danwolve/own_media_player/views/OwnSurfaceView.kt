@@ -28,9 +28,10 @@ internal class OwnSurfaceView @JvmOverloads constructor(
 
     private var isSurfaceReady = false
 
+    private var fullScreen = false
     private var onPreparedListener: ((Player) -> Unit)? = null
-    private var onLoadingListener : ((Boolean) -> Unit)? = null
-    private var onPlayingListener : ((Boolean) -> Unit)? = null
+    private var onLoadingListener: ((Boolean) -> Unit)? = null
+    private var onPlayingListener: ((Boolean) -> Unit)? = null
     private var onReadyListener: ((Player) -> Unit)? = null
     private var onCompletionListener: (() -> Unit)? = null
     private var onErrorListener: ((PlaybackException) -> Unit)? = null
@@ -52,6 +53,10 @@ internal class OwnSurfaceView @JvmOverloads constructor(
         initializeMediaPlayer(orientation)
     }
 
+    internal fun setFullScreen(fullScreen: Boolean){
+        this.fullScreen = fullScreen
+    }
+
     fun releasePlayer() {
         playerListener?.let { this.player?.removeListener(it) }
         player = null
@@ -60,15 +65,41 @@ internal class OwnSurfaceView @JvmOverloads constructor(
     fun play() = player?.play()
     fun pause() = player?.pause()
 
-    fun setOnIsLoading(listener: (Boolean) -> Unit) { onLoadingListener = listener }
-    fun setOnPlayingListener(listener: (Boolean) -> Unit) { onPlayingListener = listener }
-    fun setOnPreparedListener(listener: (Player) -> Unit) { onPreparedListener = listener }
-    fun setOnReadyListener(listener: (Player) -> Unit) { onReadyListener = listener }
-    fun setOnErrorListener(listener: (PlaybackException) -> Unit) { onErrorListener = listener }
-    fun setOnBufferingUpdateListener(listener: (Player, Long) -> Unit) { onBufferingUpdateListener = listener }
-    fun setOnSeekCompleteListener(listener: (Player) -> Unit) { onSeekCompleteListener = listener }
-    fun setOnCompletionListener(listener: () -> Unit) { onCompletionListener = listener }
-    fun setOnInfoListener(listener: (Player, Int, Int) -> Unit) { onInfoListener = listener }
+    fun setOnIsLoading(listener: (Boolean) -> Unit) {
+        onLoadingListener = listener
+    }
+
+    fun setOnPlayingListener(listener: (Boolean) -> Unit) {
+        onPlayingListener = listener
+    }
+
+    fun setOnPreparedListener(listener: (Player) -> Unit) {
+        onPreparedListener = listener
+    }
+
+    fun setOnReadyListener(listener: (Player) -> Unit) {
+        onReadyListener = listener
+    }
+
+    fun setOnErrorListener(listener: (PlaybackException) -> Unit) {
+        onErrorListener = listener
+    }
+
+    fun setOnBufferingUpdateListener(listener: (Player, Long) -> Unit) {
+        onBufferingUpdateListener = listener
+    }
+
+    fun setOnSeekCompleteListener(listener: (Player) -> Unit) {
+        onSeekCompleteListener = listener
+    }
+
+    fun setOnCompletionListener(listener: () -> Unit) {
+        onCompletionListener = listener
+    }
+
+    fun setOnInfoListener(listener: (Player, Int, Int) -> Unit) {
+        onInfoListener = listener
+    }
 
     private fun initializeMediaPlayer(orientation: Int) {
         player?.let { p ->
@@ -93,14 +124,17 @@ internal class OwnSurfaceView @JvmOverloads constructor(
                                 playBackPosition?.let { p.seekTo(it) }
                             }
                         }
+
                         Player.STATE_ENDED -> {
                             Log.d("OwnMediaPlayer", "STATE_ENDED")
                             onCompletionListener?.invoke()
                         }
+
                         Player.STATE_BUFFERING -> {
                             Log.d("OwnMediaPlayer", "STATE_BUFFERING")
                             onBufferingUpdateListener?.invoke(p, p.bufferedPosition)
                         }
+
                         Player.STATE_IDLE -> {
                             Log.d("OwnMediaPlayer", "STATE_IDLE")
                         }
@@ -128,6 +162,7 @@ internal class OwnSurfaceView @JvmOverloads constructor(
 
     private fun updateTextureViewSize(orientation: Int) {
         val player = this.player ?: return
+
         val videoWidth = player.videoSize.width.takeIf { it > 0 } ?: return
         val videoHeight = player.videoSize.height.takeIf { it > 0 } ?: return
 
@@ -136,20 +171,29 @@ internal class OwnSurfaceView @JvmOverloads constructor(
         val viewWidth = width
         val viewHeight = height
 
-        Log.d("VIEWS_HA","VIDEOWIDTH=$videoWidth \n VIDEOHEIGHT=$videoHeight \n VIEWWIDTH = $viewWidth \n VIEWHEIGHT = $viewHeight")
+        Log.d(
+            "VIEWS_HA",
+            "VIDEOWIDTH=$videoWidth \n VIDEOHEIGHT=$videoHeight \n VIEWWIDTH = $viewWidth \n VIEWHEIGHT = $viewHeight"
+        )
 
         val isLandScape = isLandscape(orientation)
 
-        val expectedWidth: Int
-        val expectedHeight: Int
-
-        if (!isLandScape) {
-            expectedHeight = (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
-            expectedWidth = viewWidth
-        } else {
-            expectedWidth = (viewHeight * videoAspectRatio).toInt().coerceAtMost(viewWidth)
-            expectedHeight = viewHeight
-        }
+        val expectedWidth: Int = getExpectedWidth(
+            isLandScape,
+            videoAspectRatio,
+            viewWidth,
+            viewHeight,
+            videoHeight,
+            videoWidth
+        )
+        val expectedHeight: Int = getExpectedHeight(
+            isLandScape,
+            videoAspectRatio,
+            viewWidth,
+            viewHeight,
+            videoHeight,
+            videoWidth
+        )
 
         val layoutParams = layoutParams as ViewGroup.MarginLayoutParams
         layoutParams.width = expectedWidth
@@ -165,7 +209,52 @@ internal class OwnSurfaceView @JvmOverloads constructor(
         requestLayout()
     }
 
+    private fun getExpectedHeight(
+        isLandScape: Boolean,
+        videoAspectRatio: Float,
+        viewWidth: Int, viewHeight: Int,
+        videoHeight: Int, videoWidth: Int
+    ) =
+        if (videoHeight > videoWidth)
+            when {
+                !isLandScape && !fullScreen -> (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
+                !isLandScape && fullScreen -> viewHeight
+                isLandScape && fullScreen -> (viewWidth / videoAspectRatio).toInt()
+                isLandScape && !fullScreen -> viewHeight
+                else -> viewHeight
+            }
+        else
+            when {
+                !isLandScape && !fullScreen -> (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
+                !isLandScape && fullScreen -> viewHeight
+                isLandScape && fullScreen -> viewHeight
+                isLandScape && !fullScreen -> (viewWidth / videoAspectRatio).toInt().coerceAtMost(viewHeight)
+                else -> viewHeight
+            }
 
+    private fun getExpectedWidth(
+        isLandScape: Boolean,
+        videoAspectRatio: Float,
+        viewWidth: Int, viewHeight: Int,
+        videoHeight: Int, videoWidth: Int
+    ) =
+        if (videoHeight > videoWidth)
+        when {
+            !isLandScape && !fullScreen -> viewWidth
+            !isLandScape && fullScreen -> (viewHeight * videoAspectRatio).toInt()
+            isLandScape && fullScreen -> viewWidth
+            isLandScape && !fullScreen -> (viewHeight * videoAspectRatio).toInt().coerceAtMost(viewWidth)
+            else -> viewHeight
+        }
+        else
+        when {
+            !isLandScape && !fullScreen -> viewWidth
+            !isLandScape && fullScreen -> (viewHeight * videoAspectRatio).toInt()
+            isLandScape && fullScreen -> (viewHeight * videoAspectRatio).toInt()
+            isLandScape && !fullScreen -> viewWidth
+            else -> viewHeight
+        }
 
-    private fun isLandscape(orientation: Int): Boolean = orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+    private fun isLandscape(orientation: Int): Boolean =
+        orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
 }
