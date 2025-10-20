@@ -41,6 +41,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class OwnVideoPlayerDialog : DialogFragment() {
     private var urlVideo : String? = null
     private var uriVideo : Uri? = null
+    private var onDismiss : (() -> Unit)? = null
     private var fullScreen : Boolean = false
     private var showFullScreenButton = true
     private var hasNotification : Boolean = false
@@ -65,6 +66,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
             urlVideo : String? = null,
             uriVideo : Uri? = null,
             fullScreen: Boolean = false,
+            onDismiss : (() -> Unit)? = null,
             showFullScreenButton : Boolean = true,
             hasNotification : Boolean,
             useLegacy : Boolean,
@@ -82,7 +84,10 @@ class OwnVideoPlayerDialog : DialogFragment() {
                 authorNoti?.let { putString(AUTHOR_NOTI,it) }
                 photoNoti?.let { putString(PHOTO_NOTI,it) }
             }
-            val fragment = OwnVideoPlayerDialog().apply { arguments = args }
+            val fragment = OwnVideoPlayerDialog().apply {
+                arguments = args
+                this.onDismiss = onDismiss
+            }
             return fragment
         }
     }
@@ -99,6 +104,8 @@ class OwnVideoPlayerDialog : DialogFragment() {
         private var titleNoti : String? = null
         private var authorNoti : String? = null
         private var photoNoti : String? = null
+        private var onDismiss : (() -> Unit)? = null
+
         companion object{
             fun setUrl(url: String) : Builder = Builder(url = url)
             fun setUri(uri: Uri) : Builder = Builder( uri = uri)
@@ -121,6 +128,11 @@ class OwnVideoPlayerDialog : DialogFragment() {
             return this
         }
 
+        fun setOnDismiss(onDismiss: () -> Unit) : Builder {
+            this.onDismiss = onDismiss
+            return this
+        }
+
         fun useLegacy() : Builder{
             this.useLegacy = true
             return this
@@ -136,7 +148,17 @@ class OwnVideoPlayerDialog : DialogFragment() {
             return this
         }
 
-        fun build() : OwnVideoPlayerDialog = newInstance(url,uri,fullScreen,showFullScreenButton,hasNotification,useLegacy,titleNoti,authorNoti,photoNoti)
+        fun build() : OwnVideoPlayerDialog = newInstance(
+            url,
+            uri,
+            fullScreen,
+            onDismiss,
+            showFullScreenButton,
+            hasNotification,
+            useLegacy,
+            titleNoti,
+            authorNoti,
+            photoNoti)
     }
 
     private val ownMediaPlayer : OwnMediaPlayer by lazy { binding.ownMediaPlayer }
@@ -370,6 +392,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
     private val rootWindowInsets by lazy { ViewCompat.getRootWindowInsets(binding.root)?.getInsets(WindowInsetsCompat.Type.systemBars()) }
 
     private fun ownDismiss(){
+        onDismiss?.invoke()
         startOrientation?.let { activity?.requestedOrientation = it }
         dismiss()
     }

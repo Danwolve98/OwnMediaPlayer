@@ -21,6 +21,7 @@ import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.annotation.RawRes
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -30,6 +31,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.whenResumed
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -99,6 +101,8 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private var fullScreen : Boolean = false
 
+    private var onClickListener : OnClickListener? = null
+
     private var closeCallBack : (()->Unit)? = null
     private var fullScreenCallBack : (() -> Unit)? = null
     private var onShowCallBack : (() -> Unit)? = null
@@ -128,7 +132,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             if(value)
                 setSurfaceViewClickListener(videoClickListener)
             else
-                setSurfaceViewClickListener(null)
+                setSurfaceViewClickListener(onClickListener)
         }
 
     private fun setSurfaceViewClickListener(clickListener: OnClickListener?){
@@ -220,6 +224,12 @@ class OwnMediaPlayer @JvmOverloads constructor (
                 delay(1000)
             }
         }
+    }
+
+    fun putOnClickListener(onClick : OnClickListener?){
+        this.onClickListener = onClick
+        if(onClick != null)
+            mediaControlsEnabled = false
     }
 
     private fun applyMargins(){
@@ -367,11 +377,11 @@ class OwnMediaPlayer @JvmOverloads constructor (
         exoPlayer?.let { assignPlayer(it) }
 
         val mediaItem = if(videoUrl != null)
-            MediaItem.fromUri(Uri.parse(videoUrl))
+            MediaItem.fromUri(videoUrl!!.toUri())
         else if(videoUri != null)
             MediaItem.fromUri(videoUri!!)
         else
-            MediaItem.fromUri(Uri.parse(""))
+            MediaItem.fromUri("".toUri())
 
         exoPlayer?.setMediaItem(mediaItem)
         exoPlayer?.prepare()
@@ -501,6 +511,16 @@ class OwnMediaPlayer @JvmOverloads constructor (
 
     private val dPlayPause by lazy {
         AppCompatResources.getDrawable(this.context,R.drawable.play_pause_selector)
+    }
+
+    fun play(){
+        isPlaying = PLAYING
+        player.play()
+    }
+
+    fun pause(){
+        isPlaying = PAUSED
+        player.pause()
     }
 
     /**
@@ -733,7 +753,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
             fullScreen = parcel.readInt()
             mediaControlsEnabled = parcel.readInt()
             videoUrl = parcel.readString()
-            videoUri = Uri.parse(parcel.readString())
+            videoUri = parcel.readString()?.toUri()
             progressVideo = parcel.readLong()
             isMuted = parcel.readInt()
             isPlaying = parcel.readInt()
@@ -814,7 +834,7 @@ class OwnMediaPlayer @JvmOverloads constructor (
         if(photoNoti is Int)
             Uri.Builder().scheme(ContentResolver.SCHEME_ANDROID_RESOURCE).path((photoNoti as Int).toString()).build()
         else
-            Uri.parse(photoNoti as String)
+           (photoNoti as String).toUri()
 
     private fun assignPlayer(player: Player){
         this.player = player

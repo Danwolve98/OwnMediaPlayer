@@ -2,6 +2,7 @@ package com.example.ownmediaplayer
 
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.danwolve.own_media_player.dialog.OwnVideoPlayerDialog
 import com.example.ownmediaplayer.databinding.ActivityMainBinding
@@ -17,10 +18,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         //OWM_MEDIA_PLAYER
-        //showOwnMediaPlayer()
+        showOwnMediaPlayer()
 
         //OWM_VIDEO_PLAYER_DIALOG
-        showOwnVideoPlayerDialog()
+        //showOwnVideoPlayerDialog()
     }
 
     private fun showOwnMediaPlayer() = with(binding.ownMediaPlayer){
@@ -28,9 +29,13 @@ class MainActivity : AppCompatActivity() {
         autoLoop(false)
         setFullScreen(true)
         showFullScreenButton(false)
+        putOnClickListener {
+            showOwnVideoPlayerDialog()
+        }
         setVideoUrl("https://connecta.vlci.valencia.es/apps/escoles/sites/default/files/videos/2024-02/GENT%20MENUDA.mp4")
         //setRawRes(R.raw.video,packageName)
     }
+
 
     private fun showOwnVideoPlayerDialog(){
         val dialog = OwnVideoPlayerDialog.Builder
@@ -38,6 +43,9 @@ class MainActivity : AppCompatActivity() {
             .setUrl("https://museusvalenciapre.grupotecopy.es/sites/default/files/2024-10/BEACON%2050%20%2B%20%20Audio%20Benlliure%2042%20%2B%20IMG.mp4")
             //.setUrl("https://connecta.vlci.valencia.es/apps/escoles/sites/default/files/videos/2024-02/GENT%20MENUDA.mp4")
             .applyFullScreen(true)
+            .setOnDismiss {
+                binding.ownMediaPlayer.play()
+            }
             //.setUri(File(Environment.getDownloadCacheDirectory(),"video.mp4").toUri())
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-09/HISTORIA_video-1_SUB-VAL.mp4")
             //.setUrl("https://museusvalenciades.grupotecopy.es/sites/default/files/2024-06/Against%20The%20Current%20-%20silent%20stranger%20%28Official%20Music%20Video%29.mp4")

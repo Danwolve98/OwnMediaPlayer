@@ -17,7 +17,6 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
-
     <com.danwolve.own_media_player.views.OwnMediaPlayer
         android:id="@+id/own_media_player"
         android:layout_width="match_parent"
