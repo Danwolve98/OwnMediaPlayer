@@ -304,8 +304,7 @@ class OwnVideoPlayerDialog : DialogFragment() {
             ViewCompat.setOnApplyWindowInsetsListener(this) { v,insets->
                 val insetsBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 
-                if(fullScreen)
-                    animateTopSystemBars(insetsBars)
+                animateTopSystemBars(insetsBars)
 
                 //SECURE AREA
                 animateSeekBarInsets(insetsBars)

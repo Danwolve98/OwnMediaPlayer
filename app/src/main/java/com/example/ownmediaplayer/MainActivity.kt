@@ -17,10 +17,10 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         //OWM_MEDIA_PLAYER
-        showOwnMediaPlayer()
+        //showOwnMediaPlayer()
 
         //OWM_VIDEO_PLAYER_DIALOG
-        //showOwnVideoPlayerDialog()
+        showOwnVideoPlayerDialog()
     }
 
     private fun showOwnMediaPlayer() = with(binding.ownMediaPlayer){
